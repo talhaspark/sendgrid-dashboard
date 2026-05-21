@@ -27,9 +27,13 @@ jobs:
           rsync -az --delete --exclude='.git' --exclude='vendor' --exclude='node_modules' ./ "$DEPLOY_USER"@"$DEPLOY_HOST":"$TARGET_PATH"
 
       - name: Run post-deploy commands (optional)
-        if: ${{ secrets.POST_DEPLOY_COMMANDS != '' }}
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          POST_DEPLOY_COMMANDS: ${{ secrets.POST_DEPLOY_COMMANDS }}
         run: |
-          ssh -i ~/.ssh/id_rsa "$DEPLOY_USER"@"$DEPLOY_HOST" "${{ secrets.POST_DEPLOY_COMMANDS }}"
+          if [ -n "$POST_DEPLOY_COMMANDS" ]; then
+            ssh -i ~/.ssh/id_rsa "$DEPLOY_USER"@"$DEPLOY_HOST" "$POST_DEPLOY_COMMANDS"
+          else
+            echo "No post-deploy commands configured."
+          fi
