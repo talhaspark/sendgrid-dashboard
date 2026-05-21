@@ -28,12 +28,16 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/id_rsa
+          # read port (optional) and default to 22
+          DEPLOY_PORT="${{ secrets.DEPLOY_PORT }}"
+          DEPLOY_PORT="${DEPLOY_PORT:-22}"
+
           # attempt to add host key but do not fail the step if the scan cannot reach the host
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
+          ssh-keyscan -p "$DEPLOY_PORT" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
 
           # Quick SSH connectivity test (non-interactive). Capture output for diagnostics.
-          echo "Testing SSH connectivity to ${{ secrets.DEPLOY_HOST }} (user: ${{ secrets.DEPLOY_USER }})"
-          ssh -o BatchMode=yes -o ConnectTimeout=8 "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}" 'echo SSH_OK' > /tmp/ssh_test 2>&1 || true
+          echo "Testing SSH connectivity to ${{ secrets.DEPLOY_HOST }} (user: ${{ secrets.DEPLOY_USER }}, port: $DEPLOY_PORT)"
+          ssh -o BatchMode=yes -o ConnectTimeout=8 -p "$DEPLOY_PORT" "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}" 'echo SSH_OK' > /tmp/ssh_test 2>&1 || true
           if grep -q "SSH_OK" /tmp/ssh_test 2>/dev/null; then
             echo "SSH connectivity test succeeded."
           else
@@ -44,12 +48,17 @@ jobs:
           fi
       - name: Sync files to server
         run: |
-          rsync -az --delete --exclude='.git' --exclude='vendor' --exclude='node_modules' ./ "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}":"${{ secrets.TARGET_PATH }}"
+          # use provided port or default to 22
+          DEPLOY_PORT="${{ secrets.DEPLOY_PORT }}"
+          DEPLOY_PORT="${DEPLOY_PORT:-22}"
+          rsync -az --delete -e "ssh -p $DEPLOY_PORT" --exclude='.git' --exclude='vendor' --exclude='node_modules' ./ "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}":"${{ secrets.TARGET_PATH }}"
 
       - name: Run post-deploy commands (optional)
         run: |
+          DEPLOY_PORT="${{ secrets.DEPLOY_PORT }}"
+          DEPLOY_PORT="${DEPLOY_PORT:-22}"
           if [ -n "${{ secrets.POST_DEPLOY_COMMANDS }}" ]; then
-            ssh "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}" "${{ secrets.POST_DEPLOY_COMMANDS }}"
+            ssh -p "$DEPLOY_PORT" "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}" "${{ secrets.POST_DEPLOY_COMMANDS }}"
           else
             echo "No post-deploy commands configured."
           fi
