@@ -1,0 +1,35 @@
+name: Deploy on push
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          TARGET_PATH: ${{ secrets.TARGET_PATH }}
+        run: |
+          rsync -az --delete --exclude='.git' --exclude='vendor' --exclude='node_modules' ./ "$DEPLOY_USER"@"$DEPLOY_HOST":"$TARGET_PATH"
+
+      - name: Run post-deploy commands (optional)
+        if: ${{ secrets.POST_DEPLOY_COMMANDS != '' }}
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          ssh -i ~/.ssh/id_rsa "$DEPLOY_USER"@"$DEPLOY_HOST" "${{ secrets.POST_DEPLOY_COMMANDS }}"

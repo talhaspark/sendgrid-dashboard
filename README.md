@@ -57,3 +57,28 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Deployment
+
+- **Purpose:** Deploy the app automatically when code is pushed to the `main` branch.
+- **What I added:** a GitHub Actions workflow at `.github/workflows/deploy.yml` and a helper script at `scripts/deploy.sh`.
+- **Required repository secrets:**
+	- **DEPLOY_HOST:** SSH host (e.g. `example.com`)
+	- **DEPLOY_USER:** SSH user (e.g. `deploy`)
+	- **DEPLOY_KEY:** Private SSH key (PEM) with access to the server
+	- **TARGET_PATH:** Remote path to deploy the repository (e.g. `/var/www/html/app`)
+	- **POST_DEPLOY_COMMANDS:** Optional — shell commands run on the server after sync (e.g. `cd /var/www/html && composer install --no-dev && php artisan migrate --force`)
+
+- **How it works:** The workflow uses `rsync` over SSH to sync the repository to `TARGET_PATH`. If `POST_DEPLOY_COMMANDS` is set, the workflow runs them via SSH after the sync.
+
+- **Setup steps:**
+	1. In your GitHub repository, go to Settings → Secrets & variables → Actions → New repository secret.
+	2. Add the secrets listed above (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `TARGET_PATH`).
+	3. If you need post-deploy steps (composer install, migrations, cache clears), add them to `POST_DEPLOY_COMMANDS` as one string.
+	4. Push to the `main` branch to trigger deployment. Adjust the branch in `.github/workflows/deploy.yml` if you use a different default branch.
+
+If you'd like, I can also:
+
+- Add `composer install` and `php artisan` steps directly in the workflow (assumes PHP/composer are on the server).
+- Configure a safer host verification step or use `known_hosts` file management.
+
