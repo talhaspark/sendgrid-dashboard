@@ -37,3 +37,4 @@ jobs:
           else
             echo "No post-deploy commands configured."
           fi
+
