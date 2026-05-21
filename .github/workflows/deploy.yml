@@ -37,8 +37,11 @@ jobs:
           if grep -q "SSH_OK" /tmp/ssh_test 2>/dev/null; then
             echo "SSH connectivity test succeeded."
           else
-            echo "SSH connectivity test failed. Output:
-
+            echo "SSH connectivity test failed. Output:" 
+            cat /tmp/ssh_test || true
+            echo "Possible causes: server rejects key, firewall blocking GitHub runner IPs, wrong user/host, or key not authorized on server."
+            exit 1
+          fi
       - name: Sync files to server
         run: |
           rsync -az --delete --exclude='.git' --exclude='vendor' --exclude='node_modules' ./ "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}":"${{ secrets.TARGET_PATH }}"
