@@ -27,7 +27,7 @@ Route::prefix('v1')->group(function () {
 
         return response()->json($emails);
     });
-
+ 
     Route::get('/emails/{email}', function (\App\Models\Email $email) {
         $email->load(['attachments', 'events']);
         return response()->json($email);
