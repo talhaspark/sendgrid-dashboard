@@ -369,6 +369,12 @@
                     <span>Inbox</span>
                 </a>
             </li>
+            <li class="{{ str_starts_with(Route::currentRouteName(), 'sent-emails') ? 'active' : '' }}">
+                <a href="{{ route('sent-emails.index') }}">
+                 <i class="fa-solid fa-envelope-circle-check"></i>
+                    <span>Sent Emails</span>
+                </a>
+            </li>
             <li class="{{ Route::currentRouteName() == 'analytics' ? 'active' : '' }}">
                 <a href="{{ route('analytics') }}">
                     <i class="fa-solid fa-chart-pie"></i>
