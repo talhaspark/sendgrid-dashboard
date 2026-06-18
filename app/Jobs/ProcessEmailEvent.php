@@ -2,9 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Models\EmailEvent;
 use App\Models\Email;
+use App\Models\EmailEvent;
 use App\Services\EmailLogger;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -45,7 +46,7 @@ class ProcessEmailEvent implements ShouldQueue
                 'event_type' => $this->eventData['event'] ?? 'unknown',
                 'email_address' => $this->eventData['email'] ?? null,
                 'event_timestamp' => isset($this->eventData['timestamp'])
-                    ? \Carbon\Carbon::createFromTimestamp($this->eventData['timestamp'])
+                    ? Carbon::createFromTimestamp($this->eventData['timestamp'])
                     : now(),
                 'smtp_id' => $this->eventData['smtp-id'] ?? null,
                 'category' => is_array($this->eventData['category'] ?? null)

@@ -19,7 +19,6 @@
         }
     }
 
-    /* Filters Card */
     .filter-group {
         display: flex;
         flex-direction: column;
@@ -83,7 +82,6 @@
         box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
     }
 
-    /* Email Items List */
     .email-item {
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
@@ -165,21 +163,24 @@
         color: var(--text-muted);
     }
 
-    /* Custom pagination */
+    /* ─── Custom Pagination ─────────────────────────────────────────── */
     .pagination-wrapper {
         margin-top: 24px;
         display: flex;
+        align-items: center;
         justify-content: center;
+        gap: 6px;
+        flex-wrap: wrap;
     }
 
-    .pagination-wrapper nav {
-        display: flex;
-        gap: 8px;
-    }
-
-    .pagination-wrapper a, .pagination-wrapper span {
-        padding: 8px 16px;
-        background: var(--glass-bg);
+    .page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        padding: 0 10px;
+        background: rgba(255, 255, 255, 0.03);
         border: 1px solid var(--glass-border);
         border-radius: 8px;
         color: var(--text-muted);
@@ -187,23 +188,45 @@
         font-weight: 500;
         font-size: 0.85rem;
         transition: all 0.2s ease;
+        white-space: nowrap;
     }
 
-    .pagination-wrapper a:hover {
+    .page-btn:hover {
         color: #fff;
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(99, 102, 241, 0.3);
     }
 
-    .pagination-wrapper .active span {
-        background: var(--accent-primary);
-        color: white;
-        border-color: var(--accent-primary);
+    .page-btn.active {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.35) 0%, rgba(236, 72, 153, 0.2) 100%);
+        border-color: rgba(99, 102, 241, 0.5);
+        color: #fff;
+        font-weight: 700;
     }
+
+    .page-btn.disabled {
+        opacity: 0.3;
+        pointer-events: none;
+        cursor: default;
+    }
+
+    .page-ellipsis {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+    /* ─────────────────────────────────────────────────────────────────── */
 </style>
+@endsection
+
 @section('content')
 
 <div class="inbox-layout">
-    
+
     <!-- Sidebar Filters -->
     <div style="display: flex; flex-direction: column; gap: 20px;">
         <div class="card" style="padding: 20px;">
@@ -220,7 +243,7 @@
                     <i class="fa-solid fa-magnifying-glass"></i> Search
                 </button>
             </form>
-            
+
             <div class="filter-group" style="margin-top: 20px;">
                 <span class="filter-label">Folder / Category</span>
                 <a href="{{ route('emails.index', array_merge(request()->query(), ['status' => null])) }}" class="filter-btn {{ !request('status') ? 'active' : '' }}">
@@ -263,19 +286,21 @@
     <div>
         <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
             <div style="color: var(--text-muted); font-size: 0.9rem;">
-                Showing <strong style="color: #fff;">{{ $emails->firstItem() ?? 0 }} - {{ $emails->lastItem() ?? 0 }}</strong> of <strong style="color: #fff;">{{ $emails->total() }}</strong> emails
+                Showing <strong style="color: #fff;">{{ $emails->firstItem() ?? 0 }} – {{ $emails->lastItem() ?? 0 }}</strong>
+                of <strong style="color: #fff;">{{ $emails->total() }}</strong> emails
             </div>
         </div>
 
         <div class="email-items-container">
             @forelse($emails as $email)
                 <div class="email-item {{ !$email->is_read ? 'unread' : '' }}">
-                    
-                    <!-- Star status toggle -->
-                    <i class="fa-solid fa-star email-star {{ $email->is_starred ? 'active' : '' }}" onclick="toggleStar(event, {{ $email->id }}, this)"></i>
+
+                    <!-- Star toggle -->
+                    <i class="fa-solid fa-star email-star {{ $email->is_starred ? 'active' : '' }}"
+                       onclick="toggleStar(event, {{ $email->id }}, this)"></i>
 
                     <a href="{{ route('emails.show', $email) }}" style="display: contents; text-decoration: none; color: inherit;">
-                        
+
                         <div class="email-meta-sender">
                             <span style="font-weight: 600; color: #fff; font-size: 0.95rem;">
                                 {{ $email->from_name ?: \Illuminate\Support\Str::before($email->from_address, '@') }}
@@ -310,6 +335,7 @@
                                 @endif
                             </div>
                         </div>
+
                     </a>
                 </div>
             @empty
@@ -321,9 +347,69 @@
             @endforelse
         </div>
 
+        {{--
+            Same root cause as sent-emails: {{ $emails->links() }} renders Laravel's
+            built-in Tailwind pagination component with giant SVG arrows that override
+            all custom styles. Replaced with a fully hand-built pagination block.
+        --}}
+        @if($emails->hasPages())
         <div class="pagination-wrapper">
-            {{ $emails->links() }}
+
+            {{-- Previous --}}
+            @if($emails->onFirstPage())
+                <span class="page-btn disabled">
+                    <i class="fa-solid fa-chevron-left" style="font-size: 0.75rem;"></i>
+                </span>
+            @else
+                <a class="page-btn" href="{{ $emails->previousPageUrl() }}&{{ http_build_query(request()->except('page')) }}">
+                    <i class="fa-solid fa-chevron-left" style="font-size: 0.75rem;"></i>
+                </a>
+            @endif
+
+            {{-- Page numbers with smart windowing --}}
+            @php
+                $currentPage = $emails->currentPage();
+                $lastPage    = $emails->lastPage();
+                $window      = 2;
+            @endphp
+
+            @for($page = 1; $page <= $lastPage; $page++)
+                @php
+                    $nearCurrent = abs($page - $currentPage) <= $window;
+                    $isEdge      = $page === 1 || $page === $lastPage;
+                    $show        = $nearCurrent || $isEdge;
+                    $prevNear    = abs(($page - 1) - $currentPage) <= $window;
+                    $prevEdge    = ($page - 1) === 1 || ($page - 1) === $lastPage;
+                    $showEllipsis = !$show && ($prevNear || $prevEdge);
+                @endphp
+
+                @if($show)
+                    @if($page == $currentPage)
+                        <span class="page-btn active">{{ $page }}</span>
+                    @else
+                        <a class="page-btn" href="{{ $emails->url($page) }}&{{ http_build_query(request()->except('page')) }}">
+                            {{ $page }}
+                        </a>
+                    @endif
+                @elseif($showEllipsis)
+                    <span class="page-ellipsis">…</span>
+                @endif
+            @endfor
+
+            {{-- Next --}}
+            @if($emails->hasMorePages())
+                <a class="page-btn" href="{{ $emails->nextPageUrl() }}&{{ http_build_query(request()->except('page')) }}">
+                    <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
+                </a>
+            @else
+                <span class="page-btn disabled">
+                    <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
+                </span>
+            @endif
+
         </div>
+        @endif
+
     </div>
 
 </div>
@@ -335,8 +421,7 @@
 function toggleStar(event, id, element) {
     event.preventDefault();
     event.stopPropagation();
-    
-    // Add glowing transition effect
+
     element.style.transform = 'scale(1.3)';
     setTimeout(() => element.style.transform = 'scale(1)', 200);
 
@@ -347,14 +432,10 @@ function toggleStar(event, id, element) {
             'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
-        if(data.success) {
-            if(data.is_starred) {
-                element.classList.add('active');
-            } else {
-                element.classList.remove('active');
-            }
+        if (data.success) {
+            element.classList.toggle('active', data.is_starred);
         }
     });
 }

@@ -251,7 +251,81 @@
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.1);
         }
+/* =========================
+   Sidebar Bottom Section
+========================= */
 
+.sidebar-bottom {
+    margin-top: auto;
+    padding: 20px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Logout Button */
+
+.sidebar-logout {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    padding: 13px 16px;
+
+    border-radius: 14px;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+
+    background: linear-gradient(
+        135deg,
+        rgba(239, 68, 68, 0.12) 0%,
+        rgba(127, 29, 29, 0.10) 100%
+    );
+
+    color: #ff7b7b;
+
+    font-size: 0.95rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: all 0.3s ease;
+}
+
+/* Hover */
+
+.sidebar-logout:hover {
+    background: linear-gradient(
+        135deg,
+        rgba(239, 68, 68, 0.18) 0%,
+        rgba(127, 29, 29, 0.18) 100%
+    );
+
+    border-color: rgba(239, 68, 68, 0.45);
+
+    transform: translateY(-2px);
+
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.15);
+}
+
+/* Icon */
+
+.sidebar-logout i {
+    font-size: 0.95rem;
+}
+
+/* Version Text */
+
+.sidebar-version {
+    margin-top: 18px;
+
+    text-align: center;
+
+    font-size: 12px;
+
+    color: #6b7280;
+
+    line-height: 1.7;
+}
         /* Flex Utilities */
         .flex-row { display: flex; align-items: center; }
         .justify-between { justify-content: space-between; }
@@ -295,6 +369,12 @@
                     <span>Inbox</span>
                 </a>
             </li>
+            <li class="{{ str_starts_with(Route::currentRouteName(), 'sent-emails') ? 'active' : '' }}">
+                <a href="{{ route('sent-emails.index') }}">
+                 <i class="fa-solid fa-envelope-circle-check"></i>
+                    <span>Sent Emails</span>
+                </a>
+            </li>
             <li class="{{ Route::currentRouteName() == 'analytics' ? 'active' : '' }}">
                 <a href="{{ route('analytics') }}">
                     <i class="fa-solid fa-chart-pie"></i>
@@ -308,10 +388,26 @@
                 </a>
             </li>
         </ul>
-        <div class="sidebar-footer">
-            <p>Laravel v{{ Illuminate\Foundation\Application::VERSION }}</p>
-            <p>PHP v{{ PHP_VERSION }}</p>
-        </div>
+
+
+     <div class="sidebar-bottom">
+
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+
+        <button type="submit" class="sidebar-logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+
+            <span>Logout</span>
+        </button>
+    </form>
+
+    <div class="sidebar-version">
+        <p>Laravel v{{ Illuminate\Foundation\Application::VERSION }}</p>
+        <p>PHP v{{ PHP_VERSION }}</p>
+    </div>
+
+</div>
     </aside>
 
     <!-- Main Workspace -->

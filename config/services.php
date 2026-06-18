@@ -34,5 +34,12 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'sendgrid' => [
+
+    'key' => env('SENDGRID_API_KEY'),
+
+    'activity_key' => env('SENDGRID_ACTIVITY_API_KEY'),
+
+],
 
 ];
