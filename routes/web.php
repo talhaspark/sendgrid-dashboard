@@ -24,8 +24,8 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
-     ->name('logout')
-     ->middleware('auth');
+    ->name('logout')
+    ->middleware('auth');
 
 // ── Protected routes ──────────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
@@ -62,8 +62,8 @@ Route::middleware('auth')->group(function () {
             ->get()
             ->groupBy('date');
 
-        $hourlyDistribution = Email::selectRaw('HOUR(received_at) as hour, COUNT(*) as count')
-            ->whereNotNull('received_at')
+        $hourlyDistribution = EmailEvent::selectRaw('HOUR(event_timestamp) as hour, COUNT(*) as count')
+            ->whereNotNull('event_timestamp')
             ->groupBy('hour')
             ->orderBy('hour')
             ->pluck('count', 'hour')
