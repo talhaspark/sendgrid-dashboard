@@ -1,398 +1,497 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard Overview')
-@section('header-title', 'System Overview')
-@section('header-subtitle', 'Real-time telemetry and inbound email statistics')
+@section('title', 'Email Activity Dashboard')
+@section('header-title', 'Email Activity Dashboard')
+@section('header-subtitle', 'Outbound delivery metrics and inbound message activity')
 
 @section('styles')
 <style>
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-
-    .metric-card {
-        background: var(--glass-bg);
+    /* Period Toggle*/
+    .period-toggle {
+        display: inline-flex;
+        background: rgba(255,255,255,0.04);
         border: 1px solid var(--glass-border);
-        padding: 20px;
-        border-radius: 16px;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        border-radius: 10px;
+        padding: 3px;
+        gap: 2px;
     }
 
-    .metric-card::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-        opacity: 0.8;
-    }
-
-    .metric-info h3 {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    .period-btn {
+        padding: 6px 18px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
         color: var(--text-muted);
-        margin-bottom: 6px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
     }
 
-    .metric-info .value {
-        font-family: var(--font-display);
-        font-size: 1.8rem;
-        font-weight: 700;
+    .period-btn.active {
+        background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(236,72,153,0.2));
+        border-color: rgba(99,102,241,0.4);
         color: #fff;
     }
 
-    .metric-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--glass-border);
+    .period-btn:hover:not(.active) {
+        color: #fff;
+        background: rgba(255,255,255,0.05);
     }
 
-    .metric-card.unread .metric-icon { color: var(--status-info); border-color: rgba(59, 130, 246, 0.3); }
-    .metric-card.starred .metric-icon { color: var(--status-warning); border-color: rgba(245, 158, 11, 0.3); }
-    .metric-card.attachments .metric-icon { color: var(--accent-secondary); border-color: rgba(236, 72, 153, 0.3); }
-    .metric-card.spam .metric-icon { color: var(--status-danger); border-color: rgba(239, 68, 68, 0.3); }
-
-    .dashboard-layout {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 24px;
-        margin-bottom: 30px;
-    }
-
-    @media (max-width: 1024px) {
-        .dashboard-layout {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .section-title {
+    /* Section header*/
+    .section-label {
         font-family: var(--font-display);
-        font-size: 1.1rem;
+        font-size: 0.8rem;
         font-weight: 600;
-        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin-bottom: 14px;
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #fff;
     }
 
-    .recent-emails-table {
-        width: 100%;
-        border-collapse: collapse;
+    .section-block {
+        margin-bottom: 40px;
     }
 
-    .recent-emails-table th, .recent-emails-table td {
-        padding: 14px 16px;
-        text-align: left;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    .section-block + .section-block {
+        padding-top: 32px;
+        border-top: 1px solid var(--glass-border);
     }
 
-    .recent-emails-table th {
-        font-weight: 600;
-        font-size: 0.8rem;
+    /* Stat Cards */
+    .stat-cards-row {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    .stat-cards-row.cols-6 { grid-template-columns: repeat(6, 1fr); }
+
+    @media (max-width: 1100px) {
+        .stat-cards-row,
+        .stat-cards-row.cols-6 { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 700px) {
+        .stat-cards-row,
+        .stat-cards-row.cols-6 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat-card {
+        padding: 22px 18px;
+        border-right: 1px solid var(--glass-border);
+        text-align: center;
+        position: relative;
+        transition: background 0.2s ease;
+    }
+
+    .stat-card:last-child { border-right: none; }
+
+    .stat-card:hover {
+        background: rgba(255,255,255,0.02);
+    }
+
+    .stat-card-label {
+        font-size: 0.68rem;
+        font-weight: 700;
         text-transform: uppercase;
-        color: var(--text-muted);
-        letter-spacing: 0.05em;
-    }
-
-    .recent-emails-table tr {
-        transition: background-color 0.2s ease;
-    }
-
-    .recent-emails-table tr:hover {
-        background-color: rgba(255, 255, 255, 0.02);
-    }
-
-    .sender-cell {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .sender-name {
-        font-weight: 600;
-        color: #fff;
-    }
-
-    .sender-address {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-    }
-
-    .subject-link {
+        letter-spacing: 0.09em;
         color: var(--text-main);
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.2s ease;
+        margin-bottom: 10px;
     }
 
-    .subject-link:hover {
-        color: var(--accent-primary);
+    .stat-card-main {
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 4px;
+    }   
+    .stat-card-sub {
+        font-size: 0.76rem;
+        color: var(--text-main);
+        margin-top: 4px;
     }
 
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 4px 8px;
-        border-radius: 8px;
-        font-size: 0.75rem;
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 3px;
+    }
+
+    /* Outbound colour set */
+    .stat-card.requests  .stat-card-main { color: #fff; }
+    .stat-card.requests::after  { background: #6366f1; }
+
+    .stat-card.delivered .stat-card-main { color: #4ade80; }
+    .stat-card.delivered::after { background: #10b981; }
+
+    .stat-card.opened    .stat-card-main { color: #38bdf8; }
+    .stat-card.opened::after    { background: #0ea5e9; }
+
+    .stat-card.clicked   .stat-card-main { color: #a78bfa; }
+    .stat-card.clicked::after   { background: #8b5cf6; }
+
+    .stat-card.bounces   .stat-card-main { color: #fb7185; }
+    .stat-card.bounces::after   { background: #f43f5e; }
+
+    .stat-card.spam      .stat-card-main { color: #b91c1c; }
+    .stat-card.spam::after      { background: #b91c1c; }
+
+    /* Inbound colour set */
+    .stat-card.received  .stat-card-main { color: #fff; }
+    .stat-card.received::after  { background: #6366f1; }
+
+    .stat-card.read       .stat-card-main { color: #4ade80; }
+    .stat-card.read::after       { background: #10b981; }
+
+    .stat-card.starred    .stat-card-main { color: #fbbf24; }
+    .stat-card.starred::after    { background: #f59e0b; }
+
+    .stat-card.attach     .stat-card-main { color: #a78bfa; }
+    .stat-card.attach::after     { background: #8b5cf6; }
+
+    .stat-card.spamflag   .stat-card-main { color: #b91c1c; }
+    .stat-card.spamflag::after   { background: #b91c1c; }
+
+    /* Chart section */
+    .chart-card {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 24px;
+        position: relative;
+    }
+
+    .chart-title {
+        font-family: var(--font-display);
+        font-size: 1rem;
         font-weight: 600;
-        text-transform: uppercase;
+        color: #fff;
+        margin-bottom: 6px;
     }
 
-    .status-badge.processed { background: rgba(16, 185, 129, 0.1); color: var(--status-success); }
-    .status-badge.received { background: rgba(59, 130, 246, 0.1); color: var(--status-info); }
-    .status-badge.failed { background: rgba(239, 68, 68, 0.1); color: var(--status-danger); }
-
-    .tag {
-        display: inline-flex;
-        padding: 2px 6px;
-        background: rgba(99, 102, 241, 0.1);
-        border: 1px solid rgba(99, 102, 241, 0.2);
-        color: #a5b4fc;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: 500;
-    }
-
-    /* Top Senders List */
-    .top-sender-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .top-sender-item:last-child {
-        border-bottom: none;
-    }
-
-    .top-sender-details {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .top-sender-count {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 4px 8px;
-        border-radius: 8px;
+    .chart-subtitle {
         font-size: 0.8rem;
-        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 20px;
     }
 
-    /* Event flow visualization */
-    .event-dots {
+    .chart-legend {
         display: flex;
-        gap: 6px;
+        gap: 20px;
         flex-wrap: wrap;
-        margin-top: 16px;
+        margin-bottom: 20px;
     }
 
-    .event-dot {
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+
+    .legend-dot {
         width: 10px;
         height: 10px;
         border-radius: 50%;
-        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    /* Webhook event tags */
+    .event-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        margin: 4px 4px 0 0;
+    }
+
+    .event-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
     }
 </style>
+@endsection
+
 @section('content')
 
-<!-- Metrics grid -->
-<div class="metrics-grid">
-    <div class="metric-card">
-        <div class="metric-info">
-            <h3>Total Inbound</h3>
-            <div class="value">{{ $stats['total'] }}</div>
-        </div>
-        <div class="metric-icon" style="color: var(--accent-primary); border-color: rgba(99, 102, 241, 0.3);">
-            <i class="fa-solid fa-cloud-arrow-down"></i>
-        </div>
+{{-- ── Top bar: title + period toggle (shared across both sections) ─── --}}
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 12px;">
+    <div>
+        <h2 style="font-family: var(--font-display); font-size: 1.3rem; color: #fff; margin: 0 0 4px;">
+            Here's your recent email activity.
+        </h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+            {{ $period === 'week' ? 'Last 7 days' : 'Last 30 days' }} ·
+            Outbound from sent_emails · Inbound from emails
+        </p>
     </div>
-    <div class="metric-card unread">
-        <div class="metric-info">
-            <h3>Unread Emails</h3>
-            <div class="value">{{ $stats['unread'] }}</div>
-        </div>
-        <div class="metric-icon">
-            <i class="fa-solid fa-envelope-open-text"></i>
-        </div>
-    </div>
-    <div class="metric-card starred">
-        <div class="metric-info">
-            <h3>Starred</h3>
-            <div class="value">{{ $stats['starred'] }}</div>
-        </div>
-        <div class="metric-icon">
-            <i class="fa-solid fa-star"></i>
-        </div>
-    </div>
-    <div class="metric-card attachments">
-        <div class="metric-info">
-            <h3>Attachments</h3>
-            <div class="value">{{ $stats['with_attachments'] }}</div>
-        </div>
-        <div class="metric-icon">
-            <i class="fa-solid fa-paperclip"></i>
-        </div>
-    </div>
-    <div class="metric-card spam">
-        <div class="metric-info">
-            <h3>Spam Flagged</h3>
-            <div class="value">{{ $stats['spam'] }}</div>
-        </div>
-        <div class="metric-icon">
-            <i class="fa-solid fa-shield-virus"></i>
-        </div>
+    <div class="period-toggle">
+        <a href="{{ request()->fullUrlWithQuery(['period' => 'week']) }}"
+           class="period-btn {{ $period === 'week' ? 'active' : '' }}">Wk</a>
+        <a href="{{ request()->fullUrlWithQuery(['period' => 'month']) }}"
+           class="period-btn {{ $period === 'month' ? 'active' : '' }}">Mo</a>
     </div>
 </div>
 
-<!-- Dashboard layout -->
-<div class="dashboard-layout">
-    
-    <!-- Left Column: Recent Emails -->
-    <div class="card" style="padding: 20px;">
-        <div class="section-title">
-            <i class="fa-solid fa-inbox" style="color: var(--accent-primary);"></i>
-            Recent Incoming Emails
-        </div>
-        <div style="overflow-x: auto;">
-            <table class="recent-emails-table">
-                <thead>
-                    <tr>
-                        <th>Sender</th>
-                        <th>Subject</th>
-                        <th>Status</th>
-                        <th>Received</th>
-                        <th style="text-align: right;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($recentEmails as $email)
-                        <tr>
-                            <td>
-                                <div class="sender-cell">
-                                    <span class="sender-name">{{ $email->from_name ?? 'Unknown' }}</span>
-                                    <span class="sender-address">{{ $email->from_address }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <a href="{{ route('emails.show', $email) }}" class="subject-link">
-                                    {{ $email->subject }}
-                                </a>
-                                @if($email->attachment_count > 0)
-                                    <i class="fa-solid fa-paperclip" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 6px;" title="{{ $email->attachment_count }} Attachments"></i>
-                                @endif
-                                @if($email->labels)
-                                    <div style="display: flex; gap: 4px; margin-top: 4px;">
-                                        @foreach($email->labels as $lbl)
-                                            <span class="tag">{{ $lbl }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </td>
-                            <td>
-                                <span class="status-badge {{ $email->status }}">
-                                    {{ $email->status }}
-                                </span>
-                            </td>
-                            <td style="font-size: 0.8rem; color: var(--text-muted);">
-                                {{ $email->received_at ? $email->received_at->diffForHumans() : 'N/A' }}
-                            </td>
-                            <td style="text-align: right;">
-                                <a href="{{ route('emails.show', $email) }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; border-radius: 8px;">
-                                    <i class="fa-solid fa-eye"></i> View
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 0;">
-                                <i class="fa-solid fa-folder-open" style="font-size: 2rem; display: block; margin-bottom: 12px; opacity: 0.5;"></i>
-                                No emails received yet.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div style="margin-top: 20px; text-align: center;">
-            <a href="{{ route('emails.index') }}" class="btn btn-primary" style="font-size: 0.85rem;">
-                <i class="fa-solid fa-list"></i> View All Inbox Emails
-            </a>
-        </div>
+ <!-- OUTBOUND — Sent email activity -->
+<div class="section-block">
+
+    <div class="section-label">
+        <i class="fa-solid fa-paper-plane" style="color: #818cf8;"></i>
+        Outbound — Sent Email Activity
     </div>
 
-    <!-- Right Column: Senders & Webhook Feed -->
-    <div style="display: flex; flex-direction: column; gap: 24px;">
-        
-        <!-- Top Senders -->
-        <div class="card" style="padding: 20px;">
-            <div class="section-title">
-                <i class="fa-solid fa-users" style="color: var(--accent-secondary);"></i>
-                Top Sender Domains
-            </div>
-            <div>
-                @forelse($topSenders as $sender)
-                    <div class="top-sender-item">
-                        <div class="top-sender-details">
-                            <span style="font-weight: 600; font-size: 0.9rem; color: #fff;">{{ $sender->from_name ?? $sender->from_address }}</span>
-                            <span style="font-size: 0.75rem; color: var(--text-muted);">{{ $sender->from_address }}</span>
-                        </div>
-                        <span class="top-sender-count">{{ $sender->count }} emails</span>
-                    </div>
-                @empty
-                    <p style="color: var(--text-muted); font-size: 0.85rem; padding: 20px 0; text-align: center;">No sender metrics yet.</p>
-                @endforelse
-            </div>
+    {{-- Stat cards --}}
+    <div class="stat-cards-row cols-6">
+
+        <div class="stat-card requests">
+            <div class="stat-card-label">Requests</div>
+            <div class="stat-card-main">{{ number_format($sentStats['requests']) }}</div>
+            <div class="stat-card-sub">Total sent</div>
         </div>
 
-        <!-- Webhook Event Stream Overview -->
-        <div class="card" style="padding: 20px;">
-            <div class="section-title">
-                <i class="fa-solid fa-bolt" style="color: var(--status-warning);"></i>
-                SendGrid Events Real-time
-            </div>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Visual feed of SendGrid webhook delivery & interaction status tags</p>
-            <div class="event-dots">
-                @foreach($eventStats as $type => $count)
-                    <span class="status-badge" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 8px 12px; display: inline-flex; align-items: center; gap: 6px;">
-                        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: {{
-                            match($type) {
-                                'processed' => '#3b82f6',
-                                'delivered' => '#10b981',
-                                'open' => '#8b5cf6',
-                                'click' => '#6366f1',
-                                'bounce' => '#ef4444',
-                                'dropped' => '#f97316',
-                                'deferred' => '#f59e0b',
-                                'spam_report' => '#dc2626',
-                                default => '#6b7280'
-                            }
-                        }}"></span>
-                        <span style="color: #fff; font-weight: 500;">{{ ucfirst($type) }}:</span> {{ $count }}
-                    </span>
-                @endforeach
-            </div>
+        <div class="stat-card delivered">
+            <div class="stat-card-label">Delivered</div>
+            <div class="stat-card-main">{{ $sentStats['delivered_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($sentStats['delivered']) }}</div>
         </div>
 
+        <div class="stat-card opened">
+            <div class="stat-card-label">Opened</div>
+            <div class="stat-card-main">{{ $sentStats['opened_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($sentStats['opens']) }} unique</div>
+        </div>
+
+        <div class="stat-card clicked">
+            <div class="stat-card-label">Clicked</div>
+            <div class="stat-card-main">{{ $sentStats['clicked_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($sentStats['clicks']) }} unique</div>
+        </div>
+
+        <div class="stat-card bounces">
+            <div class="stat-card-label">Bounces</div>
+            <div class="stat-card-main">{{ $sentStats['bounces_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($sentStats['bounces']) }}</div>
+        </div>
+
+        <div class="stat-card spam">
+            <div class="stat-card-label">Spam Reports</div>
+            <div class="stat-card-main">{{ $sentStats['spam_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($sentStats['spam_reports']) }}</div>
+        </div>
+
+    </div>
+
+    {{-- Chart --}}
+    <div class="chart-card">
+        <div class="chart-title">Outbound Activity Over Time</div>
+        <div class="chart-subtitle">
+            Daily breakdown · {{ $period === 'week' ? 'Last 7 days' : 'Last 30 days' }}
+        </div>
+
+        <div class="chart-legend">
+            @foreach([
+                ['Requests', '#6366f1'], ['Delivered', '#10b981'],
+                ['Opens', '#f59e0b'], ['Clicks', '#8b5cf6'], ['Bounces', '#ef4444'],
+            ] as [$label, $color])
+            <span class="legend-item">
+                <span class="legend-dot" style="background: {{ $color }};"></span>
+                {{ $label }}
+            </span>
+            @endforeach
+        </div>
+
+        <div style="position: relative; height: 300px;">
+            <canvas id="outboundChart"></canvas>
+        </div>
     </div>
 
 </div>
 
+<!-- INBOUND — Received email activity  -->
+<div class="section-block">
+
+    <div class="section-label">
+        <i class="fa-solid fa-inbox" style="color: #4ade80;"></i>
+        Inbound — Received Email Activity
+    </div>
+
+    {{-- Stat cards --}}
+    <div class="stat-cards-row">
+
+        <div class="stat-card received">
+            <div class="stat-card-label">Received</div>
+            <div class="stat-card-main">{{ number_format($inboundStats['total']) }}</div>
+            <div class="stat-card-sub">Total inbound</div>
+        </div>
+
+        <div class="stat-card read">
+            <div class="stat-card-label">Read</div>
+            <div class="stat-card-main">{{ $inboundStats['read_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($inboundStats['read']) }}</div>
+        </div>
+
+        <div class="stat-card starred">
+            <div class="stat-card-label">Starred</div>
+            <div class="stat-card-main">{{ $inboundStats['starred_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($inboundStats['starred']) }}</div>
+        </div>
+
+        <div class="stat-card attach">
+            <div class="stat-card-label">Attachments</div>
+            <div class="stat-card-main">{{ $inboundStats['attachments_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($inboundStats['with_attachments']) }}</div>
+        </div>
+
+        <div class="stat-card spamflag">
+            <div class="stat-card-label">Spam Flagged</div>
+            <div class="stat-card-main">{{ $inboundStats['spam_pct'] }}%</div>
+            <div class="stat-card-sub">{{ number_format($inboundStats['spam']) }}</div>
+        </div>
+
+    </div>
+
+    {{-- Chart --}}
+    <div class="chart-card">
+        <div class="chart-title">Inbound Activity Over Time</div>
+        <div class="chart-subtitle">
+            Daily breakdown · {{ $period === 'week' ? 'Last 7 days' : 'Last 30 days' }}
+        </div>
+
+        <div class="chart-legend">
+            @foreach([
+                ['Received', '#6366f1'], ['Read', '#10b981'],
+                ['Starred', '#f59e0b'], ['Attachments', '#8b5cf6'], ['Spam', '#b91c1c'],
+            ] as [$label, $color])
+            <span class="legend-item">
+                <span class="legend-dot" style="background: {{ $color }};"></span>
+                {{ $label }}
+            </span>
+            @endforeach
+        </div>
+
+        <div style="position: relative; height: 300px;">
+            <canvas id="inboundChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+ <!-- Webhook event totals — small reference strip, all-time   
+<div class="card" style="padding: 20px;">
+    <div class="section-label" style="margin-bottom: 10px;">
+        <i class="fa-solid fa-bolt" style="color: #fbbf24;"></i>
+        Webhook Event Totals (All Time)
+    </div>
+    <div>
+        @php
+            $eventColors = [
+                'processed'   => '#6366f1',
+                'delivered'   => '#10b981',
+                'open'        => '#8b5cf6',
+                'click'       => '#6366f1',
+                'bounce'      => '#ef4444',
+                'dropped'     => '#f97316',
+                'deferred'    => '#f59e0b',
+                'spamreport'  => '#dc2626',
+                'unsubscribe' => '#6b7280',
+            ];
+        @endphp
+        @forelse($eventStats as $type => $count)
+        <span class="event-tag">
+            <span class="event-dot" style="background:{{ $eventColors[$type] ?? '#9ca3af' }};"></span>
+            <span style="color:#fff;">{{ ucfirst($type) }}:</span>
+            <span style="color:var(--text-muted);">{{ number_format($count) }}</span>
+        </span>
+        @empty
+        <span style="color: var(--text-muted); font-size: 0.82rem;">No webhook events recorded yet.</span>
+        @endforelse
+    </div>
+</div> -->
+
+@endsection
+
+@section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+(function () {
+    const gridColor = 'rgba(255,255,255,0.05)';
+    const textColor = 'rgba(255,255,255,0.35)';
+
+    const tooltipStyle = {
+        backgroundColor: 'rgba(10,10,20,0.92)',
+        borderColor: 'rgba(99,102,241,0.3)',
+        borderWidth: 1,
+        titleColor: '#fff',
+        bodyColor: 'rgba(255,255,255,0.7)',
+        padding: 12,
+        callbacks: {
+            label: function(ctx) {
+                return '  ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString();
+            }
+        }
+    };
+
+    const sharedScales = {
+        x: {
+            grid: { color: gridColor, drawBorder: false },
+            ticks: { color: textColor, font: { size: 11 } },
+        },
+        y: {
+            beginAtZero: true,
+            grid: { color: gridColor, drawBorder: false },
+            ticks: {
+                color: textColor,
+                font: { size: 11 },
+                callback: function(val) {
+                    return val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val;
+                },
+            },
+        },
+    };
+
+    function renderChart(canvasId, dataJson) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: dataJson,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: tooltipStyle,
+                },
+                scales: sharedScales,
+            },
+        });
+    }
+
+    renderChart('outboundChart', @json(json_decode($sentChartJson)));
+    renderChart('inboundChart',  @json(json_decode($inboundChartJson)));
+})();
+</script>
 @endsection
