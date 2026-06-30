@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 use App\Models\SentEmail;
 use Illuminate\Http\Request;
+use App\Exports\SentEmailReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SentEmailController extends Controller
 {
@@ -30,5 +32,29 @@ class SentEmailController extends Controller
     public function show(SentEmail $sentEmail)
     {
         return view('sent-emails.show', compact('sentEmail'));
+    }
+     public function download(Request $request)
+    {
+        $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to'   => ['nullable', 'date'],
+        ]);
+
+        $from = $request->date_from;
+        $to   = $request->date_to;
+
+        // Build filename from the date range
+        if ($from && $to) {
+            $name = "sent-email-report-{$from}-to-{$to}.xlsx";
+        } elseif ($from) {
+            $name = "sent-email-report-from-{$from}.xlsx";
+        } else {
+            $name = 'sent-email-report-' . now()->format('Y-m-d') . '.xlsx';
+        }
+
+        return Excel::download(
+            new SentEmailReportExport($from, $to),
+            $name
+        );
     }
 }

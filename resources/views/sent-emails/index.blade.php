@@ -3,7 +3,6 @@
 @section('title', 'Sent Emails')
 @section('header-title', 'Sent Emails')
 @section('header-subtitle', 'Email activity logs synced from SendGrid')
-
 @section('styles')
 <style>
     .inbox-layout {
@@ -229,6 +228,24 @@
         color: var(--text-muted);
         font-size: 0.85rem;
     }
+    .report-filter-btn {
+    flex: 1;
+    padding: 5px 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.report-filter-btn.active {
+    background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(236,72,153,0.25));
+    border-color: rgba(99,102,241,0.6);
+    color: #fff;
+}
     /* ─────────────────────────────────────────────────────────────────── */
 </style>
 @endsection
@@ -306,7 +323,68 @@
                     </a>
                 </div>
             @endif
+<!-- Export Report  -->
+<div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
 
+    <span class="filter-label">
+        <i class="fa-solid fa-file-excel" style="color: #4ade80;"></i>
+        Export Report
+    </span>
+
+    <form action="{{ route('sent-emails.download') }}" method="POST"
+          style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+        @csrf
+
+        <div>
+            <label style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 4px;">
+                From
+            </label>
+            <input type="date" name="date_from"
+                value="{{ now()->toDateString() }}"
+                max="{{ now()->toDateString() }}"
+                   class="search-input" style="padding: 8px 12px; font-size: 0.82rem;">
+        </div>
+
+        <div>
+            <label style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 4px;">
+                To
+            </label>
+            <input type="date" name="date_to"
+                   value="{{ now()->toDateString() }}"
+                   max="{{ now()->toDateString() }}"
+                   class="search-input" style="padding: 8px 12px; font-size: 0.82rem;">
+        </div>
+
+    {{-- Quick presets --}}
+<div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap;">
+
+    <button type="button"
+            id="todayBtn"
+            onclick="setReportDates(1, this)"
+            class="report-filter-btn active">
+        Today
+    </button>
+
+    <button type="button"
+            onclick="setReportDates(7, this)"
+            class="report-filter-btn">
+        7 days
+    </button>
+
+    <button type="button"
+            onclick="setReportDates(30, this)"
+            class="report-filter-btn">
+        30 days
+    </button>
+</div>
+
+        <button type="submit" class="btn btn-primary"
+                style="width: 100%; font-size: 0.82rem; padding: 10px; margin-top: 10px;">
+            <i class="fa-solid fa-download"></i> Download Excel
+        </button>
+
+    </form>
+</div>
         </div>
     </div>
 
@@ -471,4 +549,26 @@
 
 </div>
 
+@endsection
+@section('scripts')
+<script>
+function setReportDates(days, button) {
+
+    const to   = new Date();
+    const from = new Date(Date.now() - (days - 1) * 86400000);
+    const fmt  = d => d.toISOString().split('T')[0];
+
+    document.querySelector('[name="date_from"]').value = fmt(from);
+    document.querySelector('[name="date_to"]').value = fmt(to);
+
+
+    // remove active from all
+    document.querySelectorAll('.report-filter-btn')
+        .forEach(btn => btn.classList.remove('active'));
+
+    // add active to clicked
+    button.classList.add('active');
+    
+}
+</script>
 @endsection

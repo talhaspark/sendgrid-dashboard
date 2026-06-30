@@ -26,7 +26,6 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout')
     ->middleware('auth');
-
 // ── Protected routes ──────────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
 
@@ -42,9 +41,11 @@ Route::middleware('auth')->group(function () {
     // Sent Emails
     Route::get('/sent-emails', [SentEmailController::class, 'index'])
         ->name('sent-emails.index');
-
     Route::get('/sent-emails/{sentEmail}', [SentEmailController::class, 'show'])
         ->name('sent-emails.show');
+    // Download XLSX Report
+    Route::post('/sent-emails/download', [SentEmailController::class, 'download'])
+        ->name('sent-emails.download');
     // Attachments
     Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
     Route::get('/attachments/{attachment}/preview', [AttachmentController::class, 'preview'])->name('attachments.preview');
