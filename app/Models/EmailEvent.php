@@ -50,7 +50,7 @@ class EmailEvent extends Model
     {
         return match($this->event_type) {
             'processed' => '#3b82f6',
-            'delivered' => '#10b981',
+            'delivered' => '#22C55E',
             'open' => '#8b5cf6',
             'click' => '#6366f1',
             'bounce' => '#ef4444',

@@ -130,13 +130,13 @@
 
     /* Outbound colour set */
     .stat-card.requests  .stat-card-main { color: #fff; }
-    .stat-card.requests::after  { background: #6366f1; }
+    .stat-card.requests::after  { background: #0ea5e9; }
 
     .stat-card.delivered .stat-card-main { color: #4ade80; }
-    .stat-card.delivered::after { background: #10b981; }
+    .stat-card.delivered::after { background: #22C55E; }
 
-    .stat-card.opened    .stat-card-main { color: #38bdf8; }
-    .stat-card.opened::after    { background: #0ea5e9; }
+    .stat-card.opened    .stat-card-main { color: #fbbf24; }
+    .stat-card.opened::after    { background: #f59e0b; }
 
     .stat-card.clicked   .stat-card-main { color: #a78bfa; }
     .stat-card.clicked::after   { background: #8b5cf6; }
@@ -149,10 +149,10 @@
 
     /* Inbound colour set */
     .stat-card.received  .stat-card-main { color: #fff; }
-    .stat-card.received::after  { background: #6366f1; }
+    .stat-card.received::after  { background: #0ea5e9; }
 
     .stat-card.read       .stat-card-main { color: #4ade80; }
-    .stat-card.read::after       { background: #10b981; }
+    .stat-card.read::after       { background: #22C55E; }
 
     .stat-card.starred    .stat-card-main { color: #fbbf24; }
     .stat-card.starred::after    { background: #f59e0b; }
@@ -310,7 +310,7 @@
 
         <div class="chart-legend">
             @foreach([
-                ['Requests', '#6366f1'], ['Delivered', '#10b981'],
+                ['Requests', '#0ea5e9'], ['Delivered', '#22C55E'],
                 ['Opens', '#f59e0b'], ['Clicks', '#8b5cf6'], ['Bounces', '#ef4444'],
             ] as [$label, $color])
             <span class="legend-item">
@@ -339,9 +339,9 @@
     <div class="stat-cards-row">
 
         <div class="stat-card received">
-            <div class="stat-card-label">Received</div>
+            <div class="stat-card-label">Requests</div>
             <div class="stat-card-main">{{ number_format($inboundStats['total']) }}</div>
-            <div class="stat-card-sub">Total inbound</div>
+            <div class="stat-card-sub">Total received</div>
         </div>
 
         <div class="stat-card read">
@@ -379,7 +379,7 @@
 
         <div class="chart-legend">
             @foreach([
-                ['Received', '#6366f1'], ['Read', '#10b981'],
+                ['Received', '#0ea5e9'], ['Read', '#22C55E'],
                 ['Starred', '#f59e0b'], ['Attachments', '#8b5cf6'], ['Spam', '#b91c1c'],
             ] as [$label, $color])
             <span class="legend-item">
@@ -405,7 +405,7 @@
     <div>
         @php
             $eventColors = [
-                'processed'   => '#6366f1',
+                'processed'   => '#0ea5e9',
                 'delivered'   => '#10b981',
                 'open'        => '#8b5cf6',
                 'click'       => '#6366f1',

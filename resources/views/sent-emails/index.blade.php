@@ -407,7 +407,7 @@
                 {{-- Status icon --}}
                 <div style="width: 28px; flex-shrink: 0; text-align: center;">
                     @if($email->status === 'delivered')
-                        <i class="fa-solid fa-circle-check" style="color: #4ade80;"></i>
+                        <i class="fa-solid fa-circle-check" style="color: #29bf33;"></i>
                     @elseif($email->status === 'bounce')
                         <i class="fa-solid fa-circle-exclamation" style="color: #f87171;"></i>
                     @elseif($email->status === 'not_delivered')
