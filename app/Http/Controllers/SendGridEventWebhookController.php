@@ -15,39 +15,48 @@ class SendGridEventWebhookController extends Controller
      */
     public function handle(Request $request): JsonResponse
     {
-        Log::channel('events')->info('SendGrid event webhook received', [
-            'event_count' => is_array($request->all()) ? count($request->all()) : 1,
+        // Respond 200 FIRST — before any processing
+        // This tells SendGrid "received, all good" so it never retries
+        $response = response()->json([
+            'success' => true,
+            'message' => 'Events received.',
         ]);
 
         try {
             $events = $request->all();
 
-            // SendGrid sends events as an array
-            if (!is_array($events) || empty($events)) {
-                return response()->json(['success' => false, 'error' => 'No events provided.'], 400);
+            if (empty($events) || !is_array($events)) {
+                Log::channel('events')->warning('SendGrid webhook received empty or invalid payload');
+                return $response;
             }
 
-            // Handle both single event and batch of events
-            // If the first key is numeric, it's an array of events
-            if (isset($events[0])) {
-                foreach ($events as $eventData) {
-                    if (is_array($eventData)) {
-                        ProcessEmailEvent::dispatch($eventData);
-                    }
+            // SendGrid always sends an array of events
+            // even if only one event occurred
+            $eventArray = isset($events[0]) ? $events : [$events];
+            $count      = 0;
+
+            foreach ($eventArray as $eventData) {
+                if (!is_array($eventData)) {
+                    continue;
                 }
-            } else {
-                // Single event
-                ProcessEmailEvent::dispatch($events);
+
+                ProcessEmailEvent::dispatch($eventData);
+                $count++;
             }
 
-            return response()->json(['success' => true, 'message' => 'Events queued for processing.']);
-
-        } catch (\Exception $e) {
-            Log::channel('events')->error('Failed to process SendGrid event webhook', [
-                'error' => $e->getMessage(),
+            Log::channel('events')->info('SendGrid webhook events queued', [
+                'count' => $count,
             ]);
 
-            return response()->json(['success' => false, 'error' => 'Internal server error.'], 500);
+        } catch (\Exception $e) {
+            // Log the error but still return 200
+            // If we return 500, SendGrid retries and we get duplicates
+            Log::channel('events')->error('Failed to queue SendGrid webhook events', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
+
+        return $response;
     }
 }

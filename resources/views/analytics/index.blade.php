@@ -161,7 +161,7 @@
                             <span style="width: 8px; height: 8px; border-radius: 50%; background-color: {{
                                 match($type) {
                                     'processed' => '#3b82f6',
-                                    'delivered' => '#10b981',
+                                    'delivered' => '#22C55E',
                                     'open' => '#8b5cf6',
                                     'click' => '#6366f1',
                                     'bounce' => '#ef4444',

@@ -24,9 +24,8 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
-     ->name('logout')
-     ->middleware('auth');
-
+    ->name('logout')
+    ->middleware('auth');
 // ── Protected routes ──────────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
 
@@ -42,9 +41,11 @@ Route::middleware('auth')->group(function () {
     // Sent Emails
     Route::get('/sent-emails', [SentEmailController::class, 'index'])
         ->name('sent-emails.index');
-
     Route::get('/sent-emails/{sentEmail}', [SentEmailController::class, 'show'])
         ->name('sent-emails.show');
+    // Download XLSX Report
+    Route::post('/sent-emails/download', [SentEmailController::class, 'download'])
+        ->name('sent-emails.download');
     // Attachments
     Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
     Route::get('/attachments/{attachment}/preview', [AttachmentController::class, 'preview'])->name('attachments.preview');
@@ -62,8 +63,8 @@ Route::middleware('auth')->group(function () {
             ->get()
             ->groupBy('date');
 
-        $hourlyDistribution = Email::selectRaw('HOUR(received_at) as hour, COUNT(*) as count')
-            ->whereNotNull('received_at')
+        $hourlyDistribution = EmailEvent::selectRaw('HOUR(event_timestamp) as hour, COUNT(*) as count')
+            ->whereNotNull('event_timestamp')
             ->groupBy('hour')
             ->orderBy('hour')
             ->pluck('count', 'hour')
