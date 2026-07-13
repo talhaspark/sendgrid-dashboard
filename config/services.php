@@ -41,5 +41,9 @@ return [
     'activity_key' => env('SENDGRID_ACTIVITY_API_KEY'),
 
 ],
+'sso' => [
+    'central_url' => env('SSO_CENTRAL_URL'),
+    'secret' => env('SSO_DASHBOARD_SECRET'),
+],
 
 ];
