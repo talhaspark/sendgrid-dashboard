@@ -4,7 +4,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
-use App\Http\Controllers\SsoController;
+use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\SentEmailController;
 use App\Models\Email;
 use App\Models\EmailEvent;
