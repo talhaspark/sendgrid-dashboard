@@ -1,65 +1,62 @@
-name: Deploy on push
+name: Deploy Laravel to FTP
 
 on:
   push:
-    branches: [ main, master ]
-
+    branches:
+      - main
 
 jobs:
-  deploy:
+  ftp-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Start ssh-agent and add key
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, pdo, pdo_mysql, zip
+          coverage: none
+
+      - name: Validate Composer
+        run: composer validate --no-check-publish
+
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Optimize Laravel
         run: |
-          set -euo pipefail
-          if [ -z "${{ secrets.DEPLOY_KEY }}" ]; then
-            echo "ERROR: DEPLOY_KEY secret is missing or empty."
-            exit 1
-          fi
-          if [ -z "${{ secrets.DEPLOY_HOST }}" ]; then
-            echo "ERROR: DEPLOY_HOST secret is missing or empty."
-            exit 1
-          fi
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_rsa
-          # read port (optional) and default to 22
-          DEPLOY_PORT="${{ secrets.DEPLOY_PORT }}"
-          DEPLOY_PORT="${DEPLOY_PORT:-22}"
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          APP_ENV: production
 
-          # attempt to add host key but do not fail the step if the scan cannot reach the host
-          ssh-keyscan -p "$DEPLOY_PORT" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
-
-          # Quick SSH connectivity test (non-interactive). Capture output for diagnostics.
-          echo "Testing SSH connectivity to ${{ secrets.DEPLOY_HOST }} (user: ${{ secrets.DEPLOY_USER }}, port: $DEPLOY_PORT)"
-          ssh -o BatchMode=yes -o ConnectTimeout=8 -p "$DEPLOY_PORT" "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}" 'echo SSH_OK' > /tmp/ssh_test 2>&1 || true
-          if grep -q "SSH_OK" /tmp/ssh_test 2>/dev/null; then
-            echo "SSH connectivity test succeeded."
-          else
-            echo "SSH connectivity test failed. Output:" 
-            cat /tmp/ssh_test || true
-            echo "Possible causes: server rejects key, firewall blocking GitHub runner IPs, wrong user/host, or key not authorized on server."
-            exit 1
-          fi
-      - name: Sync files to server
-        run: |
-          # use provided port or default to 22
-          DEPLOY_PORT="${{ secrets.DEPLOY_PORT }}"
-          DEPLOY_PORT="${DEPLOY_PORT:-22}"
-          rsync -az --delete -e "ssh -p $DEPLOY_PORT" --exclude='.git' --exclude='vendor' --exclude='node_modules' ./ "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}":"${{ secrets.TARGET_PATH }}"
-
-      - name: Run post-deploy commands (optional)
-        run: |
-          DEPLOY_PORT="${{ secrets.DEPLOY_PORT }}"
-          DEPLOY_PORT="${DEPLOY_PORT:-22}"
-          if [ -n "${{ secrets.POST_DEPLOY_COMMANDS }}" ]; then
-            ssh -p "$DEPLOY_PORT" "${{ secrets.DEPLOY_USER }}"@"${{ secrets.DEPLOY_HOST }}" "${{ secrets.POST_DEPLOY_COMMANDS }}"
-          else
-            echo "No post-deploy commands configured."
-          fi
-
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          security: loose
+          port: 21
+          server-dir: /public_html/
+          local-dir: ./
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/node_modules/**
+            **/vendor/**
+            **/tests/**
+            **/.env
+            **/.env.*
+            **/storage/logs/**
+            **/storage/framework/cache/**
+            **/storage/framework/sessions/**
+            **/storage/framework/views/**
+            **/vendor/bin/**
+            README.md
