@@ -4,6 +4,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
+use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\SentEmailController;
 use App\Models\Email;
 use App\Models\EmailEvent;
@@ -18,10 +19,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 // ── Auth routes ───────────────────────────────────────────────────────────
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
-});
+// Route::middleware('guest')->group(function () {
+//     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+//     Route::post('/login', [AuthController::class, 'login']);
+// });
+    Route::get('/sso/login', [SsoController::class, 'login'])->name('sso.login');
 
 Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout')

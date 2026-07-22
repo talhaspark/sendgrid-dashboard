@@ -40,7 +40,8 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/login')->with('success', 'Logged out successfully');
+         return redirect()->away(config('services.sso.central_url') . '/login');
+
     }
 
 }
