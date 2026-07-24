@@ -33,15 +33,13 @@ class AuthController extends Controller
         return redirect()->intended('/')->with('success', 'Login successful');
     }
 
-    public function logout(Request $request)
-    {
-        Auth::logout();
+public function logout(Request $request)
+{
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-         return redirect()->away(config('services.sso.central_url') . '/login');
-
-    }
+    return redirect(rtrim(config('services.sso.central_url'), '/') . '/dashboards');
+}
 
 }
