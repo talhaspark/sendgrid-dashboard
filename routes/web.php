@@ -1,14 +1,15 @@
 <?php
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailController;
-use App\Http\Controllers\Auth\SsoController;
 use App\Http\Controllers\SentEmailController;
 use App\Models\Email;
 use App\Models\EmailEvent;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -23,7 +24,13 @@ use Illuminate\Support\Facades\Route;
 //     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 //     Route::post('/login', [AuthController::class, 'login']);
 // });
-    Route::get('/sso/login', [SsoController::class, 'login'])->name('sso.login');
+Route::get('/optimize', function () {
+    Artisan::call('optimize:clear');
+    Artisan::call('optimize:clear');
+
+    return 'Optimization completed successfully.';
+});
+Route::get('/sso/login', [SsoController::class, 'login'])->name('sso.login');
 
 Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout')
