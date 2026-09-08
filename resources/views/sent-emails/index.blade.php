@@ -388,164 +388,320 @@
         </div>
     </div>
 
-    {{-- List --}}
-    <div>
+{{-- List --}}
+<div>
 
-        <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="color: var(--text-muted); font-size: 0.9rem;">
-                Showing <strong style="color: #fff;">{{ $emails->firstItem() ?? 0 }} – {{ $emails->lastItem() ?? 0 }}</strong>
-                of <strong style="color: #fff;">{{ $emails->total() }}</strong> emails
-            </div>
+    <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="color: var(--text-muted); font-size: 0.9rem;">
+            Showing
+            <strong style="color: #fff;">
+                {{ $emails->firstItem() ?? 0 }} – {{ $emails->lastItem() ?? 0 }}
+            </strong>
+            of
+            <strong style="color: #fff;">
+                {{ $emails->total() }}
+            </strong>
+            emails
         </div>
+    </div>
 
-        @forelse($emails as $email)
-            @php $statusClass = 'status-' . ($email->status ?? ''); @endphp
+    @if($emails->count() > 0)
+
+        @foreach($emails as $email)
+
+            @php
+                $statusClass = 'status-' . ($email->status ?? '');
+            @endphp
 
             <a href="{{ route('sent-emails.show', $email) }}"
                class="email-item {{ $statusClass }}">
 
                 {{-- Status icon --}}
                 <div style="width: 28px; flex-shrink: 0; text-align: center;">
+
                     @if($email->status === 'delivered')
-                        <i class="fa-solid fa-circle-check" style="color: #29bf33;"></i>
+
+                        <i class="fa-solid fa-circle-check"
+                           style="color: #29bf33;"></i>
+
                     @elseif($email->status === 'bounce')
-                        <i class="fa-solid fa-circle-exclamation" style="color: #f87171;"></i>
+
+                        <i class="fa-solid fa-circle-exclamation"
+                           style="color: #f87171;"></i>
+
                     @elseif($email->status === 'not_delivered')
-                        <i class="fa-solid fa-circle-xmark" style="color: #ff1010;"></i>
+
+                        <i class="fa-solid fa-circle-xmark"
+                           style="color: #ff1010;"></i>
+
                     @elseif($email->status === 'deferred')
-                        <i class="fa-solid fa-clock" style="color: #fbbf24;"></i>
+
+                        <i class="fa-solid fa-clock"
+                           style="color: #fbbf24;"></i>
+
                     @elseif($email->status === 'spam_report')
-                        <i class="fa-solid fa-triangle-exclamation" style="color: #c084fc;"></i>
+
+                        <i class="fa-solid fa-triangle-exclamation"
+                           style="color: #c084fc;"></i>
+
                     @elseif($email->status === 'blocked')
-                        <i class="fa-solid fa-ban" style="color: #9ca3af;"></i>
+
+                        <i class="fa-solid fa-ban"
+                           style="color: #9ca3af;"></i>
+
                     @else
-                        <i class="fa-solid fa-paper-plane" style="color: var(--text-muted);"></i>
+
+                        <i class="fa-solid fa-paper-plane"
+                           style="color: var(--text-muted);"></i>
+
                     @endif
+
                 </div>
+
 
                 {{-- Recipient --}}
                 <div class="email-meta-sender">
+
                     <span style="font-weight: 600; color: #fff; font-size: 0.95rem;">
                         {{ \Illuminate\Support\Str::before($email->to_email ?? 'Unknown', '@') }}
                     </span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;">
+
+                    <span style="
+                        font-size: 0.75rem;
+                        color: var(--text-muted);
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 180px;
+                    ">
                         {{ $email->to_email ?? '—' }}
                     </span>
+
                 </div>
+
 
                 {{-- Subject + counts --}}
                 <div class="email-main-content">
+
                     <div class="email-title">
                         {{ $email->subject ?: '(No Subject)' }}
                     </div>
+
                     <div style="margin-top: 5px;">
-                        <span class="eng-pill {{ $email->opens > 0 ? 'active' : '' }}" title="Opens">
-                            <i class="fa-solid fa-eye"></i> {{ $email->opens }}
+
+                        <span class="eng-pill {{ $email->opens > 0 ? 'active' : '' }}"
+                              title="Opens">
+
+                            <i class="fa-solid fa-eye"></i>
+                            {{ $email->opens }}
+
                         </span>
-                        <span class="eng-pill {{ $email->clicks > 0 ? 'active' : '' }}" title="Clicks">
-                            <i class="fa-solid fa-arrow-pointer"></i> {{ $email->clicks }}
+
+
+                        <span class="eng-pill {{ $email->clicks > 0 ? 'active' : '' }}"
+                              title="Clicks">
+
+                            <i class="fa-solid fa-arrow-pointer"></i>
+                            {{ $email->clicks }}
+
                         </span>
+
+
                         @if($email->bounces > 0)
-                            <span class="eng-pill active" style="color: #f87171;" title="Bounces">
-                                <i class="fa-solid fa-circle-exclamation"></i> {{ $email->bounces }}
+
+                            <span class="eng-pill active"
+                                  style="color: #f87171;"
+                                  title="Bounces">
+
+                                <i class="fa-solid fa-circle-exclamation"></i>
+                                {{ $email->bounces }}
+
                             </span>
+
                         @endif
+
+
                         @if($email->spam_reports > 0)
-                            <span class="eng-pill active" style="color: #c084fc;" title="Spam Reports">
-                                <i class="fa-solid fa-shield-virus"></i> {{ $email->spam_reports }}
+
+                            <span class="eng-pill active"
+                                  style="color: #c084fc;"
+                                  title="Spam Reports">
+
+                                <i class="fa-solid fa-shield-virus"></i>
+                                {{ $email->spam_reports }}
+
                             </span>
+
                         @endif
+
+
                         @if($email->categories)
+
                             @foreach(array_slice((array) $email->categories, 0, 2) as $cat)
-                                <span class="tag" style="font-size: 0.65rem; margin-left: 4px;">{{ $cat }}</span>
+
+                                <span class="tag"
+                                      style="font-size: 0.65rem; margin-left: 4px;">
+
+                                    {{ $cat }}
+
+                                </span>
+
                             @endforeach
+
                         @endif
+
                     </div>
+
                 </div>
 
-                {{-- Time + badge --}}
+
+                {{-- Time + status --}}
                 <div class="email-meta-right">
+
                     <span class="email-time">
-                        {{ $email->sent_at ? $email->sent_at->diffForHumans() : 'N/A' }}
+
+                        {{ $email->sent_at
+                            ? $email->sent_at->diffForHumans()
+                            : 'N/A'
+                        }}
+
                     </span>
+
+
                     @if($email->status)
+
                         <span class="status-badge {{ $email->status }}">
+
                             {{ ucfirst(str_replace('_', ' ', $email->status)) }}
+
                         </span>
+
                     @endif
+
                 </div>
 
             </a>
-        @empty
-            <div class="card" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
-                <i class="fa-solid fa-paper-plane" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.4; display: block;"></i>
-                <h3 style="color: #fff; margin-bottom: 8px; font-family: var(--font-display);">No sent emails found</h3>
-                <p style="font-size: 0.9rem;">Run <code>php artisan sendgrid:sync</code> to pull in your email logs.</p>
-            </div>
-        @endforelse
 
-        @if($emails->hasPages())
+        @endforeach
+
+    @else
+
+        <div class="card"
+             style="
+                text-align: center;
+                padding: 60px 20px;
+                color: var(--text-muted);
+             ">
+
+            <i class="fa-solid fa-paper-plane"
+               style="
+                    font-size: 3rem;
+                    margin-bottom: 16px;
+                    opacity: 0.4;
+                    display: block;
+               "></i>
+
+            <h3 style="
+                color: #fff;
+                margin-bottom: 8px;
+                font-family: var(--font-display);
+            ">
+                No sent emails found
+            </h3>
+
+            <p style="font-size: 0.9rem;">
+                No emails matched your search.
+            </p>
+
+        </div>
+
+    @endif
+
+
+    {{-- Pagination --}}
+    @if($emails->hasPages())
+
         <div class="pagination-wrapper">
 
             {{-- Previous --}}
             @if($emails->onFirstPage())
+
                 <span class="page-btn disabled">
-                    <i class="fa-solid fa-chevron-left" style="font-size: 0.75rem;"></i>
+                    <i class="fa-solid fa-chevron-left"
+                       style="font-size: 0.75rem;"></i>
                 </span>
+
             @else
-                <a class="page-btn" href="{{ $emails->previousPageUrl() }}&{{ http_build_query(request()->except('page')) }}">
-                    <i class="fa-solid fa-chevron-left" style="font-size: 0.75rem;"></i>
+
+                <a class="page-btn"
+                   href="{{ $emails->previousPageUrl() }}">
+
+                    <i class="fa-solid fa-chevron-left"
+                       style="font-size: 0.75rem;"></i>
+
                 </a>
+
             @endif
 
-            {{-- Page numbers with smart windowing --}}
+
+            {{-- Page numbers --}}
             @php
-                $currentPage  = $emails->currentPage();
-                $lastPage     = $emails->lastPage();
-                $window       = 2; // pages on each side of current
-                $showFirst    = 1;
-                $showLast     = $lastPage;
+
+                $currentPage = $emails->currentPage();
+                $lastPage    = $emails->lastPage();
+
             @endphp
 
-            @for($page = 1; $page <= $lastPage; $page++)
-                @php
-                    $nearCurrent = abs($page - $currentPage) <= $window;
-                    $isEdge      = $page === $showFirst || $page === $showLast;
-                    $show        = $nearCurrent || $isEdge;
-                    $prevPage    = $page - 1;
-                    $showEllipsisBefore = !$nearCurrent && !$isEdge &&
-                                         ($page === $showFirst + 1 || ($page > $showFirst + 1 && abs($prevPage - $currentPage) > $window && $prevPage !== $showFirst));
-                @endphp
 
-                @if($show)
-                    @if($page == $currentPage)
-                        <span class="page-btn active">{{ $page }}</span>
-                    @else
-                        <a class="page-btn"
-                           href="{{ $emails->url($page) }}&{{ http_build_query(request()->except('page')) }}">
-                            {{ $page }}
-                        </a>
-                    @endif
-                @elseif(!$show && ($page === $showFirst + 1 || ($currentPage - $page === $window + 1) || ($page - $currentPage === $window + 1) || ($page === $showLast - 1)))
-                    <span class="page-ellipsis">…</span>
+            @for($page = 1; $page <= $lastPage; $page++)
+
+                @if($page == $currentPage)
+
+                    <span class="page-btn active">
+                        {{ $page }}
+                    </span>
+
+                @else
+
+                    <a class="page-btn"
+                       href="{{ $emails->url($page) }}">
+
+                        {{ $page }}
+
+                    </a>
+
                 @endif
+
             @endfor
+
 
             {{-- Next --}}
             @if($emails->hasMorePages())
-                <a class="page-btn" href="{{ $emails->nextPageUrl() }}&{{ http_build_query(request()->except('page')) }}">
-                    <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
+
+                <a class="page-btn"
+                   href="{{ $emails->nextPageUrl() }}">
+
+                    <i class="fa-solid fa-chevron-right"
+                       style="font-size: 0.75rem;"></i>
+
                 </a>
+
             @else
+
                 <span class="page-btn disabled">
-                    <i class="fa-solid fa-chevron-right" style="font-size: 0.75rem;"></i>
+
+                    <i class="fa-solid fa-chevron-right"
+                       style="font-size: 0.75rem;"></i>
+
                 </span>
+
             @endif
 
         </div>
-        @endif
 
-    </div>
+    @endif
+
+</div>
 
 </div>
 
