@@ -229,23 +229,142 @@
         font-size: 0.85rem;
     }
     .report-filter-btn {
-    flex: 1;
-    padding: 5px 8px;
+        flex: 1;
+        padding: 5px 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .report-filter-btn.active {
+        background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(236,72,153,0.25));
+        border-color: rgba(99,102,241,0.6);
+        color: #fff;
+    }
+
+    /* ─── Advanced Filter Bar ────────────────────────────────────────── */
+    .adv-filter-card {
+        margin-bottom: 20px;
+        padding: 18px 20px;
+    }
+
+    .adv-filter-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .adv-filter-header h4 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 0.95rem;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .adv-filter-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(99,102,241,0.5), rgba(236,72,153,0.4));
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 700;
+    }
+
+    .adv-filter-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+
+    @media (max-width: 1100px) {
+        .adv-filter-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+        .adv-filter-grid { grid-template-columns: 1fr; }
+    }
+
+ .adv-filter-field label {
     font-size: 0.72rem;
-    font-weight: 600;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--glass-border);
-    border-radius: 6px;
     color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.2s;
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
-.report-filter-btn.active {
-    background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(236,72,153,0.25));
-    border-color: rgba(99,102,241,0.6);
-    color: #fff;
+/* Status select */
+.adv-filter-field select.search-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 38px 0 12px;
+    border: 1px solid #252d3d;
+    border-radius: 9px;
+    background-color: #171d2b;
+    color: #f1f5f9;
+    font-size: 0.85rem;
+    outline: none;
+
+    /* Important for native dropdown on dark UI */
+    color-scheme: dark;
 }
+
+/* Select options */
+.adv-filter-field select.search-input option {
+    background-color: #171d2b;
+    color: #f1f5f9;
+}
+
+/* Selected option */
+.adv-filter-field select.search-input option:checked {
+    background-color: #1e366e;
+    color: #ffffff;
+}
+
+.adv-filter-field select.search-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+    .adv-filter-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+        align-items: center;
+    }
+
+    select.search-input {
+        appearance: none;
+        cursor: pointer;
+    }
+    .adv-filter-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+        align-items: center;
+    }
+
+    select.search-input {
+        appearance: none;
+        cursor: pointer;
+    }
     /* ─────────────────────────────────────────────────────────────────── */
 </style>
 @endsection
@@ -259,7 +378,7 @@
         <div class="card" style="padding: 20px;">
 
             <form action="{{ route('sent-emails.index') }}" method="GET" class="filter-group">
-                <span class="filter-label">Search</span>
+                <span class="filter-label">Quick Search</span>
                 <input type="text" name="search" value="{{ request('search') }}"
                        placeholder="Subject or recipient..."
                        class="search-input">
@@ -316,7 +435,7 @@
                 </a>
             </div>
 
-            @if(request()->anyFilled(['search', 'status']))
+            @if(request()->anyFilled(['search', 'status', 'message_id', 'to_email', 'from_email', 'subject', 'category', 'date_from', 'date_to']))
                 <div style="margin-top: 20px;">
                     <a href="{{ route('sent-emails.index') }}" class="btn btn-secondary" style="width: 100%; font-size: 0.8rem;">
                         <i class="fa-solid fa-arrow-rotate-left"></i> Clear Filters
@@ -331,7 +450,7 @@
         Export Report
     </span>
 
-    <form action="{{ route('sent-emails.download') }}" method="POST"
+    <form id="reportForm" action="{{ route('sent-emails.download') }}" method="POST"
           style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
         @csrf
 
@@ -390,6 +509,142 @@
 
 {{-- List --}}
 <div>
+
+    {{-- ── Advanced Multi-Filter Panel ───────────────────────────────── --}}
+    @php
+        $advancedFilterCount = collect([
+            'message_id', 'to_email', 'from_email', 'subject', 'category', 'date_from', 'date_to',
+        ])->filter(fn ($key) => request()->filled($key))->count();
+    @endphp
+
+    <div class="card adv-filter-card">
+
+        <div class="adv-filter-header" onclick="const p = document.getElementById('advFilterBody'); p.style.display = p.style.display === 'none' ? 'block' : 'none';">
+            <h4>
+                <i class="fa-solid fa-sliders" style="color: var(--accent-primary, #6366f1);"></i>
+                Advanced Sear Filters
+                @if($advancedFilterCount > 0)
+                    <span class="adv-filter-count">{{ $advancedFilterCount }}</span>
+                @endif
+            </h4>
+            <i class="fa-solid fa-chevron-down" style="color: var(--text-muted); font-size: 0.8rem;"></i>
+        </div>
+
+        <div id="advFilterBody" style="{{ $advancedFilterCount > 0 ? '' : 'display:none;' }}">
+            <form action="{{ route('sent-emails.index') }}" method="GET">
+
+                {{-- Preserve the quick sidebar search box if it was used --}}
+                @if(request('search'))
+                    <input type="hidden" name="search" value="{{ request('search') }}">
+                @endif
+
+                <div class="adv-filter-grid">
+
+                    <div class="adv-filter-field">
+                        <label for="message_id">Message ID</label>
+                        <input type="text" id="message_id" name="message_id"
+                               value="{{ request('message_id') }}"
+                               placeholder="e.g. abc123xyz"
+                               class="search-input">
+                    </div>
+
+                    <div class="adv-filter-field">
+                        <label for="from_email">Sender Email</label>
+                        <input type="text" id="from_email" name="from_email"
+                               value="{{ request('from_email') }}"
+                               placeholder="sender@domain.com"
+                               class="search-input">
+                    </div>
+
+                    <div class="adv-filter-field">
+                        <label for="to_email">Recipient Email</label>
+                        <input type="text" id="to_email" name="to_email"
+                               value="{{ request('to_email') }}"
+                               placeholder="recipient@domain.com"
+                               class="search-input">
+                    </div>
+
+                    <div class="adv-filter-field">
+                        <label for="subject">Subject</label>
+                        <input type="text" id="subject" name="subject"
+                               value="{{ request('subject') }}"
+                               placeholder="Subject contains..."
+                               class="search-input">
+                    </div>
+
+                    <div class="adv-filter-field">
+                        <label for="status">Status / Event</label>
+                        <select id="status" name="status" class="search-input">
+                            <option value="">Any status</option>
+                            @foreach([
+                                'processed'    => 'Processed / Queued',
+                                'delivered'    => 'Delivered',
+                                'not_delivered'=> 'Not Delivered',
+                                'open'         => 'Opened',
+                                'click'        => 'Clicked',
+                                'bounce'       => 'Bounced',
+                                'dropped'      => 'Dropped',
+                                'deferred'     => 'Deferred',
+                                'spam_report'  => 'Spam Report',
+                                'blocked'      => 'Blocked',
+                                'unsubscribe'  => 'Unsubscribed',
+                            ] as $value => $label)
+                                <option value="{{ $value }}" {{ request('status') == $value ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    @if(isset($categories) && $categories->isNotEmpty())
+                        <div class="adv-filter-field">
+                            <label for="category">Category</label>
+                            <select id="category" name="category" class="search-input">
+                                <option value="">Any category</option>
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat }}" {{ request('category') == $cat ? 'selected' : '' }}>
+                                        {{ $cat }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
+                    <div class="adv-filter-field">
+                        <label for="date_from">Date From</label>
+                        <input type="date" id="date_from" name="date_from"
+                               value="{{ request('date_from') }}"
+                               max="{{ now()->toDateString() }}"
+                               class="search-input">
+                    </div>
+
+                    <div class="adv-filter-field">
+                        <label for="date_to">Date To</label>
+                        <input type="date" id="date_to" name="date_to"
+                               value="{{ request('date_to') }}"
+                               max="{{ now()->toDateString() }}"
+                               class="search-input">
+                    </div>
+
+                </div>
+
+                <div class="adv-filter-actions">
+                    <button type="submit" class="btn btn-primary" style="font-size: 0.85rem; padding: 10px 20px;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Apply Filters
+                    </button>
+
+                    @if($advancedFilterCount > 0)
+                        <a href="{{ route('sent-emails.index', request()->only('search', 'status')) }}"
+                           class="btn btn-secondary" style="font-size: 0.85rem; padding: 10px 20px;">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Clear Advanced Filters
+                        </a>
+                    @endif
+                </div>
+
+            </form>
+        </div>
+    </div>
+    {{-- ── End Advanced Filter Panel ─────────────────────────────────── --}}
 
     <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
         <div style="color: var(--text-muted); font-size: 0.9rem;">
@@ -567,6 +822,12 @@
 
                     </span>
 
+                    @if($email->sg_message_id)
+                        <span class="email-time" style="font-size: 0.7rem; opacity: 0.7;" title="Message ID">
+                            <i class="fa-solid fa-hashtag"></i>{{ \Illuminate\Support\Str::limit($email->sg_message_id, 14) }}
+                        </span>
+                    @endif
+
 
                     @if($email->status)
 
@@ -644,16 +905,28 @@
             @endif
 
 
-            {{-- Page numbers --}}
+            {{-- Page numbers (windowed, with ellipsis, so we don't render hundreds of buttons) --}}
             @php
 
                 $currentPage = $emails->currentPage();
                 $lastPage    = $emails->lastPage();
+                $onEachSide  = 2; // how many page numbers to show either side of the current page
 
             @endphp
 
+            {{-- Leading page 1 + ellipsis --}}
+            @if($currentPage > $onEachSide + 1)
 
-            @for($page = 1; $page <= $lastPage; $page++)
+                <a class="page-btn" href="{{ $emails->url(1) }}">1</a>
+
+                @if($currentPage > $onEachSide + 2)
+                    <span class="page-ellipsis">&hellip;</span>
+                @endif
+
+            @endif
+
+            {{-- Window around the current page --}}
+            @for($page = max(1, $currentPage - $onEachSide); $page <= min($lastPage, $currentPage + $onEachSide); $page++)
 
                 @if($page == $currentPage)
 
@@ -673,6 +946,17 @@
                 @endif
 
             @endfor
+
+            {{-- Trailing ellipsis + last page --}}
+            @if($currentPage < $lastPage - $onEachSide)
+
+                @if($currentPage < $lastPage - $onEachSide - 1)
+                    <span class="page-ellipsis">&hellip;</span>
+                @endif
+
+                <a class="page-btn" href="{{ $emails->url($lastPage) }}">{{ $lastPage }}</a>
+
+            @endif
 
 
             {{-- Next --}}
@@ -714,8 +998,9 @@ function setReportDates(days, button) {
     const from = new Date(Date.now() - (days - 1) * 86400000);
     const fmt  = d => d.toISOString().split('T')[0];
 
-    document.querySelector('[name="date_from"]').value = fmt(from);
-    document.querySelector('[name="date_to"]').value = fmt(to);
+    const reportForm = document.getElementById('reportForm');
+    reportForm.querySelector('[name="date_from"]').value = fmt(from);
+    reportForm.querySelector('[name="date_to"]').value = fmt(to);
 
 
     // remove active from all
@@ -724,7 +1009,7 @@ function setReportDates(days, button) {
 
     // add active to clicked
     button.classList.add('active');
-    
+
 }
 </script>
 @endsection
