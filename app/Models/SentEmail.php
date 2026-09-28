@@ -13,6 +13,8 @@ class SentEmail extends Model
         'subject',
         'status',
         'sent_at',
+        'last_event',
+        'last_event_at',
         'opens',
         'clicks',
         'bounces',
@@ -29,6 +31,7 @@ class SentEmail extends Model
 
     protected $casts = [
         'sent_at' => 'datetime',
+        'last_event_at' => 'datetime',
         'categories' => 'array',
         'custom_args' => 'array',
         'raw_payload' => 'array',
@@ -45,7 +48,8 @@ class SentEmail extends Model
 
     public function events()
     {
-        return $this->hasMany(EmailEvent::class, 'sg_message_id', 'sg_message_id');
+        return $this->hasMany(EmailEvent::class, 'sg_message_id', 'sg_message_id')
+            ->orderBy('event_timestamp');
     }
 
     // Scopes
@@ -63,7 +67,17 @@ class SentEmail extends Model
         return $query->where('status', $status);
     }
 
-    // Accessors — used in blade views
+  
+    public function scopeSortBySentAt($query, string $direction = 'desc')
+    {
+        return $query->orderBy('sent_at', $direction);
+    }
+
+
+    public function scopeSortByActivity($query, string $direction = 'desc')
+    {
+        return $query->orderBy('last_event_at', $direction);
+    }
 
     public function getStatusLabelAttribute(): string
     {
@@ -75,16 +89,14 @@ class SentEmail extends Model
             'bounce' => 'Bounced',
             'dropped' => 'Dropped',
             'deferred' => 'Deferred',
-            'spamreport' => 'Spam',
+            'spam_report' => 'Spam',
+            'blocked' => 'Blocked',
             'unsubscribe' => 'Unsubscribed',
             default => ucfirst($this->status ?? 'Unknown'),
         };
     }
 
-    /**
-     * CSS class for status badge color.
-     * Used in blade: class="status-badge {{ $email->status }}"
-     */
+ 
     public function getBadgeColorAttribute(): string
     {
         return match ($this->status) {
@@ -94,7 +106,8 @@ class SentEmail extends Model
             'bounce' => 'badge-danger',
             'dropped' => 'badge-warning',
             'deferred' => 'badge-warning',
-            'spamreport' => 'badge-danger',
+            'spam_report' => 'badge-danger',
+            'blocked' => 'badge-secondary',
             default => 'badge-secondary',
         };
     }
@@ -102,6 +115,16 @@ class SentEmail extends Model
     public function getCategoriesStringAttribute(): string
     {
         return implode(', ', $this->categories ?? []);
+    }
+
+ 
+    public function getHasRecentActivityAttribute(): bool
+    {
+        if (! $this->last_event_at || ! $this->sent_at) {
+            return false;
+        }
+
+        return ! $this->last_event_at->equalTo($this->sent_at);
     }
 
     // Statistics — used on dashboard/analytics pages
@@ -114,7 +137,7 @@ class SentEmail extends Model
             'opened' => static::where('opens', '>', 0)->count(),
             'clicked' => static::where('clicks', '>', 0)->count(),
             'bounced' => static::where('status', 'bounce')->count(),
-            'spam' => static::where('status', 'spamreport')->count(),
+            'spam' => static::where('status', 'spam_report')->count(),
             'today' => static::whereDate('sent_at', today())->count(),
             'this_week' => static::whereBetween('sent_at', [
                 now()->startOfWeek(),

@@ -97,7 +97,10 @@
         border-color: rgba(99, 102, 241, 0.2);
     }
 
+    .email-item.status-processed   { border-left: 4px solid #3b82f6; }
     .email-item.status-delivered   { border-left: 4px solid #22c55e; }
+    .email-item.status-open        { border-left: 4px solid #8b5cf6; }
+    .email-item.status-click       { border-left: 4px solid #6366f1; }
     .email-item.status-not_delivered { border-left: 4px solid #ff1010; }
     .email-item.status-bounce      { border-left: 4px solid #ef4444; }
     .email-item.status-deferred    { border-left: 4px solid #f59e0b; }
@@ -140,6 +143,12 @@
         color: var(--text-muted);
     }
 
+    .email-activity-time {
+        font-size: 0.72rem;
+        color: #818cf8;
+        opacity: 0.85;
+    }
+
     .status-badge {
         display: inline-flex;
         align-items: center;
@@ -155,10 +164,14 @@
 
     .status-badge.delivered   { background: rgba(34,197,94,0.12);  border-color: rgba(34,197,94,0.25);  color: #4ade80; }
     .status-badge.processed   { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.25); color: #818cf8; }
+    .status-badge.open        { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.25); color: #c4b5fd; }
+    .status-badge.click       { background: rgba(99,102,241,0.14); border-color: rgba(99,102,241,0.3);  color: #a5b4fc; }
     .status-badge.bounce      { background: rgba(239,68,68,0.12);  border-color: rgba(239,68,68,0.25);  color: #f87171; }
     .status-badge.deferred    { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.25); color: #fbbf24; }
     .status-badge.spam_report { background: rgba(168,85,247,0.12); border-color: rgba(168,85,247,0.25); color: #c084fc; }
     .status-badge.blocked     { background: rgba(107,114,128,0.12);border-color: rgba(107,114,128,0.25);color: #9ca3af; }
+    .status-badge.dropped     { background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.25); color: #fb923c; }
+    .status-badge.unsubscribe { background: rgba(107,114,128,0.12);border-color: rgba(107,114,128,0.25);color: #9ca3af; }
 
     .eng-pill {
         display: inline-flex;
@@ -170,6 +183,30 @@
     }
 
     .eng-pill.active { color: #fff; }
+
+    /* ─── Sort toggle ────────────────────────────────────────────────── */
+    .sort-toggle {
+        display: inline-flex;
+        gap: 4px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        padding: 3px;
+    }
+
+    .sort-toggle a {
+        padding: 5px 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-decoration: none;
+        border-radius: 6px;
+    }
+
+    .sort-toggle a.active {
+        background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(236,72,153,0.25));
+        color: #fff;
+    }
 
     /* ─── Custom Pagination ──────────────────────────────────────────── */
     .pagination-wrapper {
@@ -343,17 +380,6 @@
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
-    .adv-filter-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 16px;
-        align-items: center;
-    }
-
-    select.search-input {
-        appearance: none;
-        cursor: pointer;
-    }
     .adv-filter-actions {
         display: flex;
         gap: 10px;
@@ -646,7 +672,7 @@
     </div>
     {{-- ── End Advanced Filter Panel ─────────────────────────────────── --}}
 
-    <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <div style="color: var(--text-muted); font-size: 0.9rem;">
             Showing
             <strong style="color: #fff;">
@@ -658,6 +684,8 @@
             </strong>
             emails
         </div>
+
+  
     </div>
 
     @if($emails->count() > 0)
@@ -678,6 +706,16 @@
 
                         <i class="fa-solid fa-circle-check"
                            style="color: #29bf33;"></i>
+
+                    @elseif($email->status === 'open')
+
+                        <i class="fa-solid fa-envelope-open"
+                           style="color: #a78bfa;"></i>
+
+                    @elseif($email->status === 'click')
+
+                        <i class="fa-solid fa-arrow-pointer"
+                           style="color: #818cf8;"></i>
 
                     @elseif($email->status === 'bounce')
 
@@ -813,7 +851,7 @@
                 {{-- Time + status --}}
                 <div class="email-meta-right">
 
-                    <span class="email-time">
+                    <span class="email-time" title="Original sent date">
 
                         {{ $email->sent_at
                             ? $email->sent_at->diffForHumans()
@@ -821,6 +859,17 @@
                         }}
 
                     </span>
+
+                    {{-- Last activity is a distinct concept from sent_at —
+                         only shown when it actually differs, so an email
+                         that hasn't had any activity yet doesn't show a
+                         redundant duplicate line. --}}
+                    @if($email->has_recent_activity)
+                        <span class="email-activity-time" title="Latest webhook activity">
+                            <i class="fa-solid fa-bolt"></i>
+                            {{ $email->last_event_at->diffForHumans() }}
+                        </span>
+                    @endif
 
                     @if($email->sg_message_id)
                         <span class="email-time" style="font-size: 0.7rem; opacity: 0.7;" title="Message ID">
@@ -833,7 +882,7 @@
 
                         <span class="status-badge {{ $email->status }}">
 
-                            {{ ucfirst(str_replace('_', ' ', $email->status)) }}
+                            {{ $email->status_label }}
 
                         </span>
 
