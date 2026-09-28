@@ -18,6 +18,20 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* Status badge colors — this page didn't previously load these rules
+       at all (they only existed in the index page's own style block,
+       which doesn't apply here), so the badge rendered unstyled. */
+    .status-badge.delivered   { background: rgba(34,197,94,0.12);  border-color: rgba(34,197,94,0.25);  color: #4ade80; }
+    .status-badge.processed   { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.25); color: #818cf8; }
+    .status-badge.open        { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.25); color: #c4b5fd; }
+    .status-badge.click       { background: rgba(99,102,241,0.14); border-color: rgba(99,102,241,0.3);  color: #a5b4fc; }
+    .status-badge.bounce      { background: rgba(239,68,68,0.12);  border-color: rgba(239,68,68,0.25);  color: #f87171; }
+    .status-badge.deferred    { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.25); color: #fbbf24; }
+    .status-badge.spam_report { background: rgba(168,85,247,0.12); border-color: rgba(168,85,247,0.25); color: #c084fc; }
+    .status-badge.blocked     { background: rgba(107,114,128,0.12);border-color: rgba(107,114,128,0.25);color: #9ca3af; }
+    .status-badge.dropped     { background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.25); color: #fb923c; }
+    .status-badge.unsubscribe { background: rgba(107,114,128,0.12);border-color: rgba(107,114,128,0.25);color: #9ca3af; }
 </style>
 @endsection
 @section('content')
@@ -88,10 +102,20 @@
 
 
 
-                    <span>
+                    <span title="Original sent date — never changes when new events arrive">
                         <i class="fa-solid fa-clock"></i>
-                        {{ $sentEmail->sent_at?->format('M d, Y h:i A') ?? 'N/A' }}
+                        Sent: {{ $sentEmail->sent_at?->format('M d, Y h:i A') ?? 'N/A' }}
                     </span>
+
+                    {{-- Last activity is a distinct concept from sent_at —
+                         only shown when there's activity after the send. --}}
+                    @if($sentEmail->has_recent_activity)
+                        <span title="Latest webhook event received">
+                            <i class="fa-solid fa-bolt" style="color:#818cf8;"></i>
+                            Last activity: {{ $sentEmail->last_event_at->format('M d, Y h:i A') }}
+                            ({{ $sentEmail->last_event_at->diffForHumans() }})
+                        </span>
+                    @endif
 
 
                 </div>
@@ -247,8 +271,9 @@
             ['From',$sentEmail->from_email],
             ['To',$sentEmail->to_email],
             ['Subject',$sentEmail->subject ?: '—'],
-            ['Status',$sentEmail->status],
+            ['Status',$sentEmail->status_label],
             ['Sent at',$sentEmail->sent_at?->format('M d, Y H:i:s') ?? 'N/A'],
+            ['Last activity',$sentEmail->last_event_at?->format('M d, Y H:i:s') ?? '—'],
             ['Categories',$sentEmail->categories ? implode(', ', $sentEmail->categories) : '—'],
         ] as [$label,$value])
 
@@ -327,132 +352,195 @@
 
 
 </div>
-    <!-- Right Column: Delivery Telemetry & Events Timeline -->
+    <!-- Right Column: Delivery Telemetry & Event History -->
 
-            {{-- ── SendGrid Events Timeline ──────────────────────────────── --}}
+            {{-- Event History: grouped by event type, expandable, with
+                 a per-event JSON detail view. Mirrors SendGrid's own
+                 Email Activity "Event History" panel. --}}
             <div style="position:sticky; top:20px;">
     <div class="card" style="padding: 20px;">
-    
+
         <div style="display: flex; justify-content: space-between;
                     align-items: center; margin-bottom: 20px;">
             <div style="font-family: var(--font-display); font-size: 1rem;
                         font-weight: 600; color: #fff; display: flex;
                         align-items: center; gap: 8px;">
                 <i class="fa-solid fa-heart-pulse" style="color: #4ade80;"></i>
-                SendGrid Events Timeline
+                Event History
             </div>
             <span style="font-size: 0.75rem; color: var(--text-muted);">
                 {{ $sentEmail->events->count() }} event(s)
             </span>
         </div>
-    
+
         @if($sentEmail->events->count() > 0)
-            <ul style="position: relative; padding-left: 28px; list-style: none; margin: 0;">
-    
-                {{-- vertical line --}}
-                <li style="position: absolute; left: 9px; top: 8px; bottom: 8px;
-                           width: 2px; background: var(--glass-border); list-style: none;"></li>
-    
-                @foreach($sentEmail->events as $event)
-                    @php
-                        $dotColor = match($event->event_type) {
-                            'delivered'              => '#22c55e',
-                            'open'                   => '#8b5cf6',
-                            'click'                  => '#6366f1',
-                            'bounce'                 => '#ef4444',
-                            'deferred'               => '#f59e0b',
-                            'spamreport','spam_report'=> '#dc2626',
-                            'dropped'                => '#f97316',
-                            'unsubscribe'            => '#6b7280',
-                            'processed'              => '#3b82f6',
-                            default                  => '#6b7280',
-                        };
-                        $dotIcon = match($event->event_type) {
-                            'delivered'              => 'fa-check',
-                            'open'                   => 'fa-eye',
-                            'click'                  => 'fa-arrow-pointer',
-                            'bounce'                 => 'fa-exclamation',
-                            'deferred'               => 'fa-clock',
-                            'spamreport','spam_report'=> 'fa-shield',
-                            'dropped'                => 'fa-xmark',
-                            'unsubscribe'            => 'fa-user-minus',
-                            'processed'              => 'fa-cog',
-                            default                  => 'fa-circle',
-                        };
-                    @endphp
-    
-                    <li style="position: relative; margin-bottom: 18px;">
-    
-                        {{-- dot --}}
-                        <span style="position: absolute; left: -28px; top: 6px;
-                                     width: 20px; height: 20px; border-radius: 50%;
-                                     background: {{ $dotColor }}; display: flex;
-                                     align-items: center; justify-content: center;
-                                     font-size: 0.58rem; color: #fff;">
-                            <i class="fa-solid {{ $dotIcon }}"></i>
-                        </span>
-    
-                        {{-- body --}}
-                        <div style="background: rgba(255,255,255,0.02);
-                                    border: 1px solid var(--glass-border);
-                                    border-radius: 10px; padding: 12px 14px;">
-    
-                            <div style="font-weight: 600; font-size: 0.88rem; color: #fff;
-                                        display: flex; justify-content: space-between; align-items: center;">
-                                <span>{{ ucfirst($event->event_type) }}</span>
-                                <span style="font-size: 0.62rem; color: var(--text-muted);
-                                             font-weight: 400; background: rgba(255,255,255,0.04);
-                                             padding: 2px 6px; border-radius: 4px;">Webhook</span>
-                            </div>
-    
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 3px;">
-                                {{ $event->event_timestamp?->format('M d, Y — h:i:s A') ?? 'N/A' }}
-                                @if($event->event_timestamp)
-                                    <span style="margin-left: 6px; opacity: 0.5;">
-                                        ({{ $event->event_timestamp->diffForHumans() }})
-                                    </span>
-                                @endif
-                            </div>
-    
-                            {{-- click URL --}}
-                            @if($event->event_type === 'click' && $event->url)
-                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 8px;
-                                        padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04);
-                                        word-break: break-all;">
-                                <i class="fa-solid fa-link" style="margin-right: 4px;"></i>
-                                {{ \Illuminate\Support\Str::limit($event->url, 65) }}
-                            </div>
-                            @endif
-    
-                            {{-- open/click: IP + user agent --}}
-                            @if(in_array($event->event_type, ['open','click']) && ($event->ip || $event->useragent))
-                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 8px;
-                                        padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04);
-                                        line-height: 1.7; word-break: break-all;">
-                                @if($event->ip)
-                                    <div><i class="fa-solid fa-globe" style="margin-right: 4px;"></i>{{ $event->ip }}</div>
-                                @endif
-                                @if($event->useragent)
-                                    <div><i class="fa-solid fa-display" style="margin-right: 4px;"></i>{{ \Illuminate\Support\Str::limit($event->useragent, 68) }}</div>
-                                @endif
-                            </div>
-                            @endif
-    
-                            {{-- bounce/drop reason --}}
-                            @if(in_array($event->event_type, ['bounce','dropped','deferred']) && $event->reason)
-                            <div style="font-size: 0.72rem; color: #fca5a5; margin-top: 8px;
-                                        padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04);
-                                        word-break: break-all;">
-                                <i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i>
-                                {{ $event->reason }}
-                            </div>
-                            @endif
-    
+
+            @php
+                // Group stored events by type so repeats (e.g. 5 opens)
+                // collapse into a single row with a count and an
+                // expandable per-instance list, same as SendGrid's own
+                // Email Activity view.
+                $eventGroups = $sentEmail->events
+                    ->groupBy('event_type')
+                    ->map(function ($events) {
+                        return (object) [
+                            'event_type' => $events->first()->event_type,
+                            'count' => $events->count(),
+                            'latest' => $events->sortByDesc('event_timestamp')->first(),
+                            'instances' => $events->sortByDesc('event_timestamp')->values(),
+                        ];
+                    })
+                    ->sortByDesc(fn ($g) => $g->latest->event_timestamp)
+                    ->values();
+
+                // Milestone strip: processed -> delivered -> first
+                // meaningful event, oldest first, only showing steps
+                // that actually happened for this message.
+                $milestoneOrder = ['processed', 'delivered', 'open', 'click', 'bounce', 'dropped', 'deferred', 'spam_report', 'blocked', 'unsubscribe'];
+                $milestones = collect($milestoneOrder)
+                    ->filter(fn ($type) => $eventGroups->firstWhere('event_type', $type))
+                    ->map(function ($type) use ($eventGroups) {
+                        $group = $eventGroups->firstWhere('event_type', $type);
+                        return (object) [
+                            'event_type' => $type,
+                            'at' => $group->instances->sortBy('event_timestamp')->first()->event_timestamp,
+                        ];
+                    })
+                    ->sortBy('at')
+                    ->values();
+
+                $labelMap = [
+                    'processed' => 'Processed', 'delivered' => 'Delivered', 'open' => 'Opened',
+                    'click' => 'Clicked', 'bounce' => 'Bounced', 'dropped' => 'Dropped',
+                    'deferred' => 'Deferred', 'spam_report' => 'Spam', 'blocked' => 'Blocked',
+                    'unsubscribe' => 'Unsubscribed',
+                ];
+                $iconMap = [
+                    'delivered' => 'fa-check', 'open' => 'fa-eye', 'click' => 'fa-arrow-pointer',
+                    'bounce' => 'fa-exclamation', 'deferred' => 'fa-clock', 'spam_report' => 'fa-shield',
+                    'dropped' => 'fa-xmark', 'blocked' => 'fa-ban', 'unsubscribe' => 'fa-user-minus',
+                    'processed' => 'fa-cog',
+                ];
+                $colorMap = [
+                    'delivered' => '#22c55e', 'open' => '#8b5cf6', 'click' => '#6366f1',
+                    'bounce' => '#ef4444', 'deferred' => '#f59e0b', 'spam_report' => '#dc2626',
+                    'dropped' => '#f97316', 'blocked' => '#6b7280', 'unsubscribe' => '#6b7280',
+                    'processed' => '#3b82f6',
+                ];
+            @endphp
+
+            {{-- Milestone strip --}}
+            @if($milestones->count() > 1)
+            <div style="display:flex; align-items:flex-start; margin-bottom: 16px; overflow-x:auto; padding-bottom: 4px;">
+                @foreach($milestones as $m)
+                    <div style="display:flex; flex-direction:column; align-items:center; min-width: 72px; flex-shrink:0;">
+                        <div style="width:26px; height:26px; border-radius:50%; background:{{ $colorMap[$m->event_type] ?? '#6b7280' }};
+                                    display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.7rem;">
+                            <i class="fa-solid {{ $iconMap[$m->event_type] ?? 'fa-circle' }}"></i>
                         </div>
-                    </li>
+                        <span style="font-size:0.68rem; color:#fff; margin-top:6px; white-space:nowrap;">{{ $labelMap[$m->event_type] ?? ucfirst($m->event_type) }}</span>
+                        <span style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap;">{{ $m->at->format('n/j g:i A') }}</span>
+                    </div>
+                    @if(!$loop->last)
+                        <div style="flex:1; height:2px; background:var(--glass-border); margin: 13px 4px 0; min-width: 14px;"></div>
+                    @endif
                 @endforeach
-            </ul>
-    
+            </div>
+
+            @php
+                $firstMilestone = $milestones->first()->at;
+                $lastMilestone = $milestones->last()->at;
+                $spanSeconds = $firstMilestone->diffInSeconds($lastMilestone);
+            @endphp
+            <div style="text-align:center; margin-bottom: 20px;">
+                <span style="display:inline-flex; align-items:center; gap:6px; background: rgba(99,102,241,0.1);
+                             border:1px solid rgba(99,102,241,0.25); color:#a5b4fc; padding:4px 12px;
+                             border-radius:20px; font-size:0.7rem;">
+                    <i class="fa-solid fa-circle-info"></i>
+                    First to latest event:
+                    {{ $spanSeconds < 60 ? 'Less than a minute' : $firstMilestone->diffForHumans($lastMilestone, true) }}
+                </span>
+            </div>
+            @endif
+
+            {{-- Expand all toggle --}}
+            <div style="display:flex; justify-content:flex-end; margin-bottom: 10px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.75rem; color: var(--text-muted); cursor:pointer;">
+                    <input type="checkbox" id="expandAllEvents" onchange="toggleAllEventGroups(this.checked)">
+                    Expand all events
+                </label>
+            </div>
+
+            {{-- Grouped event list --}}
+            <div style="border:1px solid var(--glass-border); border-radius:10px; overflow:hidden;">
+                @foreach($eventGroups as $gi => $group)
+                    <div style="{{ !$loop->last ? 'border-bottom: 1px solid var(--glass-border);' : '' }}">
+
+                        {{-- group header row --}}
+                        <div onclick="toggleEventGroup({{ $gi }})"
+                             style="display:flex; align-items:center; justify-content:space-between;
+                                    padding: 12px 14px; cursor:pointer; background: rgba(255,255,255,0.015);">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span style="width:10px; height:10px; border-radius:50%; background:{{ $colorMap[$group->event_type] ?? '#6b7280' }}; flex-shrink:0;"></span>
+                                <div>
+                                    <div style="font-size:0.85rem; color:#fff; font-weight:600;">
+                                        {{ $labelMap[$group->event_type] ?? ucfirst($group->event_type) }}
+                                        @if($group->count > 1)
+                                            <span style="color:var(--text-muted); font-weight:400;">({{ $group->count }})</span>
+                                        @endif
+                                    </div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted);">
+                                        Latest: {{ $group->latest->event_timestamp?->format('n/j/Y g:i:s A') }}
+                                    </div>
+                                </div>
+                            </div>
+                            <i id="eventGroupChevron-{{ $gi }}" class="fa-solid fa-chevron-down" style="color:var(--text-muted); font-size:0.7rem; transition: transform 0.15s ease;"></i>
+                        </div>
+
+                        {{-- individual instances --}}
+                        <div id="eventGroupBody-{{ $gi }}" style="display:none; padding: 0 14px 12px 30px;">
+                            @foreach($group->instances as $ii => $event)
+                                <div style="padding: 8px 0; {{ !$loop->last ? 'border-bottom:1px dashed var(--glass-border);' : '' }}">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                                        <span style="font-size:0.78rem; color:#fff;">
+                                            {{ $labelMap[$group->event_type] ?? ucfirst($group->event_type) }} event #{{ $group->count - $ii }}
+                                            at {{ $event->event_timestamp?->format('n/j/Y g:i:s A') }}
+                                        </span>
+                                        <button type="button" onclick="toggleEventJson({{ $gi }}, {{ $ii }})"
+                                                style="background:none; border:none; color:#818cf8; font-size:0.75rem; cursor:pointer; padding:0;">
+                                            View details
+                                        </button>
+                                    </div>
+
+                                    @if($event->event_type === 'click' && $event->url)
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; word-break: break-all;">
+                                            <i class="fa-solid fa-link" style="margin-right: 4px;"></i>{{ \Illuminate\Support\Str::limit($event->url, 60) }}
+                                        </div>
+                                    @endif
+                                    @if(in_array($event->event_type, ['open','click']) && ($event->ip || $event->useragent))
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; line-height:1.6; word-break: break-all;">
+                                            @if($event->ip)<div><i class="fa-solid fa-globe" style="margin-right:4px;"></i>{{ $event->ip }}</div>@endif
+                                            @if($event->useragent)<div><i class="fa-solid fa-display" style="margin-right:4px;"></i>{{ \Illuminate\Support\Str::limit($event->useragent, 60) }}</div>@endif
+                                        </div>
+                                    @endif
+                                    @if(in_array($event->event_type, ['bounce','dropped','deferred','blocked']) && $event->reason)
+                                        <div style="font-size: 0.7rem; color: #fca5a5; margin-top: 4px; word-break: break-all;">
+                                            <i class="fa-solid fa-circle-info" style="margin-right:4px;"></i>{{ $event->reason }}
+                                        </div>
+                                    @endif
+
+                                    {{-- per-event JSON, from the raw_payload we already store on every event row --}}
+                                    <div id="eventJson-{{ $gi }}-{{ $ii }}" style="display:none; margin-top:8px;">
+                                        <pre style="background:#0d1117; border:1px solid var(--glass-border); border-radius:8px;
+                                                    padding:12px; font-size:0.68rem; color:#93e6b3; overflow:auto; max-height:260px; margin:0;">{{ json_encode($event->raw_payload, JSON_PRETTY_PRINT) }}</pre>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
         @else
             <div style="text-align: center; color: var(--text-muted); padding: 40px 0;">
                 <i class="fa-solid fa-hourglass-half"
@@ -463,12 +551,38 @@
                 </p>
             </div>
         @endif
-    
+
     </div>
     </div>
 </div>
 
 
 
+@endsection
+@section('scripts')
+<script>
+function toggleEventGroup(i) {
+    const body = document.getElementById('eventGroupBody-' + i);
+    const chevron = document.getElementById('eventGroupChevron-' + i);
+    if (!body) return;
+    const isOpen = body.style.display === 'block';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+}
 
+function toggleAllEventGroups(expand) {
+    document.querySelectorAll('[id^="eventGroupBody-"]').forEach(function (el) {
+        el.style.display = expand ? 'block' : 'none';
+    });
+    document.querySelectorAll('[id^="eventGroupChevron-"]').forEach(function (el) {
+        el.style.transform = expand ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+}
+
+function toggleEventJson(groupIndex, instanceIndex) {
+    const el = document.getElementById('eventJson-' + groupIndex + '-' + instanceIndex);
+    if (!el) return;
+    el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+</script>
 @endsection
