@@ -63,13 +63,13 @@ class SendGridActivityService
 
     //  HOURLY / DAILY SYNC (cron)
 
-    public function sync(int $hours = 2, bool $fetchEventHistory = false): array
-    {
-        $from = now()->subHours($hours)->toISOString();
-        $to   = now()->toISOString();
+public function sync(int $hours = 2, bool $fetchEventHistory = true): array
+{
+    $from = now()->subHours($hours)->toISOString();
+    $to   = now()->toISOString();
 
-        return $this->fetchAndStore($from, $to, $fetchEventHistory);
-    }
+    return $this->fetchAndStore($from, $to, $fetchEventHistory);
+}
 
     //   CORE FETCH + STORE
 
