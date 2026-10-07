@@ -8,4 +8,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('sendgrid:sync --hours=2')->hourly()->withoutOverlapping();
+Schedule::command('sendgrid:sync --hours=4')
+    ->hourly()
+    ->withoutOverlapping(10); 
